@@ -5,11 +5,11 @@ import 'package:kolir/components/vue_semaines.dart';
 import 'package:kolir/logic/colloscope.dart';
 
 void main() async {
-  runApp(const MyApp());
+  runApp(const _App());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class _App extends StatelessWidget {
+  const _App();
 
   // This widget is the root of your application.
   @override
@@ -31,7 +31,7 @@ class _Home extends StatefulWidget {
   State<_Home> createState() => _HomeState();
 }
 
-enum _ModeView { semaines, groupes, matieres }
+enum _ModeView { matieres, groupes, semaines }
 
 final l = [DateTime(2022, 9, 6, 10, 30), DateTime(2022, 9, 15, 19, 30)];
 
@@ -52,7 +52,7 @@ final sample = Colloscope({
 
 class _HomeState extends State<_Home> {
   Colloscope col = sample;
-  var mode = _ModeView.semaines;
+  var mode = _ModeView.matieres;
 
   @override
   void initState() {
@@ -95,6 +95,20 @@ class _HomeState extends State<_Home> {
     });
   }
 
+  void removeCreneau(Matiere mat, DateTime creneau) {
+    setState(() {
+      col.removeCreneau(mat, creneau);
+    });
+  }
+
+  Creneaux attributeCreneau(
+      Matiere mat, GroupeID origin, PopulatedCreneau dst) {
+    setState(() {
+      col.attributeCreneau(mat, origin, dst);
+    });
+    return col.parMatiere();
+  }
+
   Widget get body {
     switch (mode) {
       case _ModeView.semaines:
@@ -102,11 +116,13 @@ class _HomeState extends State<_Home> {
       case _ModeView.groupes:
         return VueGroupeW(
           col.parGroupe(),
+          col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
+          onAttributeCreneau: attributeCreneau,
         );
       case _ModeView.matieres:
-        return VueMatiereW(col.parMatiere(), addCreneaux);
+        return VueMatiereW(col.parMatiere(), addCreneaux, removeCreneau);
     }
   }
 
@@ -114,9 +130,7 @@ class _HomeState extends State<_Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: const Text("Kolir"),
+        title: const Text("Kolir - Edition du colloscope"),
         actions: [
           ElevatedButton(
               onPressed: () async {

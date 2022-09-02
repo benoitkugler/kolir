@@ -6,19 +6,19 @@ extension ColorM on Matiere {
   Color get color {
     switch (this) {
       case Matiere.maths:
-        return Colors.blue;
+        return Colors.blue.shade200;
       case Matiere.esh:
-        return Colors.green;
+        return Colors.green.shade200;
       case Matiere.anglais:
-        return Colors.orange;
+        return Colors.orange.shade300;
       case Matiere.allemand:
-        return Colors.yellow;
+        return Colors.yellow.shade300;
       case Matiere.espagnol:
-        return Colors.yellowAccent;
+        return Colors.pink.shade300;
       case Matiere.francais:
-        return Colors.purple;
+        return Colors.purple.shade300;
       case Matiere.philo:
-        return Colors.pink;
+        return Colors.teal.shade300;
     }
   }
 }
@@ -68,6 +68,7 @@ class SemaineList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: List<Widget>.generate(
           semaines.length, (s) => _SemaineRow(premiereSemaine, s, semaines[s])),
@@ -100,7 +101,9 @@ class _SemaineRow extends StatelessWidget {
 class ColleW extends StatelessWidget {
   final Colle colle;
   final bool showMatiere;
-  const ColleW(this.colle, {this.showMatiere = true, super.key});
+  final void Function()? onDelete;
+
+  const ColleW(this.colle, {this.showMatiere = true, this.onDelete, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +117,18 @@ class ColleW extends StatelessWidget {
           borderRadius: const BorderRadius.all(Radius.circular(4)),
         ),
         padding: const EdgeInsets.all(8),
-        child: Text(text),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(text),
+            if (onDelete != null)
+              IconButton(
+                  splashRadius: 10,
+                  onPressed: onDelete,
+                  icon: deleteIcon,
+                  color: Colors.red)
+          ],
+        ),
       ),
     );
   }

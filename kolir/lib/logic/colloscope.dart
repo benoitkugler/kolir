@@ -119,16 +119,21 @@ class Colloscope {
   }
 
   Map<Matiere, VueMatiere> parMatiere() {
-    final tmp = <Matiere, Map<int, List<DateTime>>>{};
-    for (var group in groupes.values) {
-      for (var item in group.entries) {
+    final tmp = <Matiere, Map<int, List<PopulatedCreneau>>>{};
+    for (var groupItem in groupes.entries) {
+      for (var item in groupItem.value.entries) {
         final matiere = item.key;
         final semaines = tmp.putIfAbsent(matiere, () => {});
         for (var date in item.value) {
           final weekIndex = week(date);
           final semaine = semaines.putIfAbsent(weekIndex, () => []);
-          semaine.add(date);
+          semaine.add(PopulatedCreneau(date, groupItem.key));
         }
+      }
+    }
+    for (var m in tmp.values) {
+      for (var l in m.values) {
+        l.sort((a, b) => a.date.compareTo(b.date));
       }
     }
     return Map<Matiere, VueMatiere>.fromEntries(Matiere.values
@@ -141,16 +146,32 @@ class Colloscope {
 
   void addGroupe() {
     int serial = groupes.length + 1;
-    String id = "Groupe$serial";
+    if (groupes.containsKey(NoGroup)) {
+      serial -= 1;
+    }
+    String id = "Groupe $serial";
     while (groupes.containsKey(id)) {
       serial += 1;
-      id = "Groupe$serial";
+      id = "Groupe $serial";
     }
     groupes[id] = {};
   }
 
+  /// removeGroupe supprime le groupe donné
+  /// les créneaux liés ne sont pas supprimés
   void removeGroupe(GroupeID id) {
-    groupes.remove(id);
+    final group = groupes.remove(id);
+    if (group == null) {
+      return;
+    }
+
+    // ajoute les créneaux à NoGroup
+    final nogroup = groupes.putIfAbsent(NoGroup, () => {});
+    for (var entry in group.entries) {
+      final matiere = entry.key;
+      final l = nogroup.putIfAbsent(matiere, () => []);
+      l.addAll(entry.value);
+    }
   }
 
   /// [addCreneaux] ajoute les heures données comme non
@@ -173,6 +194,27 @@ class Colloscope {
     final l = groupes.putIfAbsent(NoGroup, () => {});
     final lmat = l.putIfAbsent(mat, () => []);
     lmat.addAll(finalTimes);
+  }
+
+  /// removeCreneau supprime le creneau pour tous les groupes
+  void removeCreneau(Matiere mat, DateTime creneau) {
+    for (var groupe in groupes.values) {
+      final l = groupe[mat] ?? [];
+      l.remove(creneau);
+    }
+  }
+
+  /// attributeCreneau assigne le créneau donné au groupe donné,
+  /// retirant le groupe précédent si nécessaire
+  void attributeCreneau(Matiere mat, GroupeID origin, PopulatedCreneau dst) {
+    final group = groupes.putIfAbsent(origin, () => {});
+    final matList = group.putIfAbsent(mat, () => []);
+    matList.add(dst.date);
+
+    // cleanup the given creneau
+    final oldGroup = groupes[dst.groupeID] ?? {};
+    final oldMatList = oldGroup[mat] ?? [];
+    oldMatList.remove(dst.date);
   }
 }
 
@@ -227,7 +269,15 @@ extension HMG on HeuresMatiereGroupe {
 
 typedef VueSemaine = Map<Matiere, List<GroupeID>>;
 
-typedef VueMatiere = List<List<DateTime>>; // semaine -> colle
+typedef VueMatiere = List<List<PopulatedCreneau>>; // semaine -> colle
+
+class PopulatedCreneau {
+  final DateTime date;
+  final GroupeID groupeID;
+
+  /// may be NoGroup
+  const PopulatedCreneau(this.date, this.groupeID);
+}
 
 List<T> _semaineMapToList<T>(Map<int, T> semaines, T empty) {
   if (semaines.isEmpty) {

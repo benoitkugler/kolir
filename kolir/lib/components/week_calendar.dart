@@ -86,7 +86,7 @@ class _WeekCalendarState extends State<WeekCalendar> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: SizedBox(
-                      width: 100,
+                      width: 200,
                       child: TextField(
                         controller: semainesController,
                         decoration:

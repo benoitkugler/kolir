@@ -2,13 +2,13 @@ import 'package:kolir/logic/colloscope.dart';
 
 const _days = [
   "",
-  "Lundi",
-  "Mardi",
-  "Mercredi",
-  "Jeudi",
-  "Vendredi",
-  "Samedi",
-  "Dimanche",
+  "Lun.",
+  "Mar.",
+  "Mer.",
+  "Jeu.",
+  "Ven.",
+  "Sam.",
+  "Dim.",
 ];
 
 String formatWeekday(int weekday) {

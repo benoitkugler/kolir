@@ -7,17 +7,19 @@ import '../logic/utils.dart';
 
 class VueMatiereW extends StatelessWidget {
   final Map<Matiere, VueMatiere> matieres;
+
   final void Function(Matiere mat, List<DateTime> hours, List<int> semaines)
       onAdd;
+  final void Function(Matiere mat, DateTime creneau) onDelete;
 
-  const VueMatiereW(this.matieres, this.onAdd, {super.key});
+  const VueMatiereW(this.matieres, this.onAdd, this.onDelete, {super.key});
 
   @override
   Widget build(BuildContext context) {
     final entries = matieres.entries.toList();
     return ListHeader(
       title: "Vue par matières",
-      actions: [],
+      actions: const [],
       child: Expanded(
           child: ListView(
         children: entries
@@ -28,7 +30,8 @@ class VueMatiereW extends StatelessWidget {
                       e.key,
                       h,
                       s,
-                    )))
+                    ),
+                (dt) => onDelete(e.key, dt)))
             .toList(),
       )),
     );
@@ -39,8 +42,10 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
   final void Function(List<DateTime> hours, List<int> semaines) onAdd;
+  final void Function(DateTime creneau) onDelete;
 
-  const _MatiereW(this.matiere, this.semaines, this.onAdd, {super.key});
+  const _MatiereW(this.matiere, this.semaines, this.onAdd, this.onDelete,
+      {super.key});
 
   void showAddCreneaux(BuildContext context) {
     showDialog(
@@ -72,8 +77,9 @@ class _MatiereW extends StatelessWidget {
                         .map((creneaux) => Wrap(
                               children: creneaux
                                   .map((e) => ColleW(
-                                        Colle(e, matiere),
+                                        Colle(e.date, matiere),
                                         showMatiere: false,
+                                        onDelete: () => onDelete(e.date),
                                       ))
                                   .toList(),
                             ))
