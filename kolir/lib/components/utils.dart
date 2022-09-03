@@ -18,12 +18,30 @@ extension ColorM on Matiere {
   }
 }
 
-class ListHeader extends StatelessWidget {
-  final String title;
+enum ModeView { matieres, groupes, semaines }
+
+extension Title on ModeView {
+  String get title {
+    switch (this) {
+      case ModeView.matieres:
+        return "Vue par matières";
+      case ModeView.groupes:
+        return "Vue par groupes";
+      case ModeView.semaines:
+        return "Vue d'ensemble";
+    }
+  }
+}
+
+class ViewNotification extends Notification {}
+
+class VueSkeleton extends StatelessWidget {
+  final ModeView mode;
   final List<Widget> actions;
   final Widget child;
-  const ListHeader(
-      {required this.title,
+
+  const VueSkeleton(
+      {required this.mode,
       required this.actions,
       required this.child,
       super.key});
@@ -35,12 +53,21 @@ class ListHeader extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.only(top: 6.0, bottom: 4),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 18),
+                Tooltip(
+                  message: "Passer à la vue suivante",
+                  child: ElevatedButton.icon(
+                      onPressed: () => ViewNotification().dispatch(context),
+                      icon: const Icon(
+                        IconData(0xf028c,
+                            fontFamily: 'MaterialIcons',
+                            matchTextDirection: true),
+                        size: 42,
+                      ),
+                      label: Text(mode.title)),
                 ),
                 const Spacer(),
                 ...actions

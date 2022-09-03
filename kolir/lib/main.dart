@@ -36,11 +36,9 @@ class _Home extends StatefulWidget {
   State<_Home> createState() => _HomeState();
 }
 
-enum _ModeView { matieres, groupes, semaines }
-
 class _HomeState extends State<_Home> {
   Colloscope col = Colloscope.empty();
-  var mode = _ModeView.matieres;
+  var mode = ModeView.matieres;
   bool isDirty = false;
 
   @override
@@ -104,6 +102,14 @@ class _HomeState extends State<_Home> {
     return col.parMatiere();
   }
 
+  Creneaux clearCreneaux(Matiere mat, int semaine) {
+    setState(() {
+      col.clearCreneaux(mat, semaine);
+      isDirty = true;
+    });
+    return col.parMatiere();
+  }
+
   void _export() async {
     final matieres = matieresToHTML(col);
     final groupes = groupesToHTML(col);
@@ -123,17 +129,18 @@ class _HomeState extends State<_Home> {
 
   Widget get body {
     switch (mode) {
-      case _ModeView.semaines:
+      case ModeView.semaines:
         return VueSemaineW(col.parSemaine());
-      case _ModeView.groupes:
+      case ModeView.groupes:
         return VueGroupeW(
           col.parGroupe(),
           col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
           onAttributeCreneau: attributeCreneau,
+          onClearCreneaux: clearCreneaux,
         );
-      case _ModeView.matieres:
+      case ModeView.matieres:
         return VueMatiereW(col.parMatiere(), addCreneaux, removeCreneau);
     }
   }
@@ -168,7 +175,7 @@ class _HomeState extends State<_Home> {
 
   void _toogleView() {
     setState(() {
-      mode = _ModeView.values[(mode.index + 1) % (_ModeView.values.length)];
+      mode = ModeView.values[(mode.index + 1) % (ModeView.values.length)];
     });
   }
 
@@ -200,16 +207,8 @@ class _HomeState extends State<_Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kolir - Edition du colloscope"),
+        title: Text("Edition du colloscope - ${mode.title}"),
         actions: [
-          Tooltip(
-            message: "Passer à la vue suivante",
-            child: ElevatedButton.icon(
-                onPressed: _toogleView,
-                icon: const Icon(IconData(0xf028c,
-                    fontFamily: 'MaterialIcons', matchTextDirection: true)),
-                label: const Text("Changer de vue")),
-          ),
           Tooltip(
               message: "Exporter le colloscope au format HTML.",
               child: ElevatedButton.icon(
@@ -221,16 +220,19 @@ class _HomeState extends State<_Home> {
             message: "Sauvegarder le colloscope actuel sur le disque.",
             child: ElevatedButton.icon(
                 onPressed: isDirty ? _save : null,
-                icon: const Icon(IconData(0xe550, fontFamily: 'MaterialIcons')),
+                icon: Icon(
+                  const IconData(0xe550, fontFamily: 'MaterialIcons'),
+                  color: isDirty ? Colors.green : Colors.grey,
+                ),
                 label: const Text("Enregistrer")),
           ),
           Tooltip(
             message: "Revenir à la dernière sauvegarde.",
             child: ElevatedButton.icon(
                 onPressed: isDirty ? _reload : null,
-                icon: const Icon(
-                  IconData(0xf010a, fontFamily: 'MaterialIcons'),
-                  color: Colors.orange,
+                icon: Icon(
+                  const IconData(0xf010a, fontFamily: 'MaterialIcons'),
+                  color: isDirty ? Colors.orange : Colors.grey,
                 ),
                 label: const Text("Annuler")),
           ),
@@ -245,7 +247,12 @@ class _HomeState extends State<_Home> {
                   label: const Text("Effacer"))),
         ],
       ),
-      body: body,
+      body: NotificationListener<ViewNotification>(
+          onNotification: (_) {
+            _toogleView();
+            return true;
+          },
+          child: body),
     );
   }
 }

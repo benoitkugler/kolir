@@ -8,9 +8,9 @@ class VueSemaineW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListHeader(
-        title: "Vue par semaines",
-        actions: [],
+    return VueSkeleton(
+        mode: ModeView.semaines,
+        actions: const [],
         child: Expanded(
           child: SingleChildScrollView(
             child: SemaineList(

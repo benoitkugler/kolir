@@ -17,8 +17,8 @@ class VueMatiereW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entries = matieres.entries.toList();
-    return ListHeader(
-      title: "Vue par matières",
+    return VueSkeleton(
+      mode: ModeView.matieres,
       actions: const [],
       child: Expanded(
           child: ListView(
@@ -58,7 +58,7 @@ class _MatiereW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(8.0),

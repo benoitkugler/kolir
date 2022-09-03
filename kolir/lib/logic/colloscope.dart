@@ -237,6 +237,22 @@ class Colloscope {
       dstMatList.add(src.date);
     }
   }
+
+  /// [clearCreneaux] enlève les groupes prévus pour la semaine [semaine]
+  /// et matière [mat]
+  void clearCreneaux(Matiere mat, int semaine) {
+    final noGroup = _groupes.putIfAbsent(NoGroup, () => {});
+    final noGroupMap = noGroup.putIfAbsent(mat, () => []);
+    for (var groupe in _groupes.entries) {
+      if (groupe.key == NoGroup) {
+        continue;
+      }
+      final l = groupe.value[mat] ?? [];
+      final toRemove = l.where((dt) => _week(dt) == semaine).toList();
+      l.removeWhere((dt) => _week(dt) == semaine);
+      noGroupMap.addAll(toRemove);
+    }
+  }
 }
 
 typedef GroupeID = String;
