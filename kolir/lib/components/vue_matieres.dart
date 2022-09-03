@@ -67,7 +67,7 @@ class _MatiereW extends StatelessWidget {
             children: [
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.1,
-                child: Text("${formatMatiere(matiere)} :",
+                child: Text(formatMatiere(matiere),
                     style: const TextStyle(fontSize: 18)),
               ),
               Expanded(

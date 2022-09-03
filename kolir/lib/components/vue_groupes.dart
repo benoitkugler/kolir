@@ -38,10 +38,11 @@ class VueGroupeW extends StatelessWidget {
     return ListHeader(
       title: "Vue par groupes",
       actions: [
-        ElevatedButton(
+        ElevatedButton.icon(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: onAddGroupe,
-            child: const Text("Ajouter un groupe")),
+            icon: const Icon(IconData(0xe047, fontFamily: 'MaterialIcons')),
+            label: const Text("Ajouter un groupe")),
         const SizedBox(width: 10),
         ElevatedButton(
             onPressed: () => showEditPassages(context),
@@ -82,9 +83,10 @@ class _GroupeW extends StatelessWidget {
                 color: Colors.red,
               ),
               Text(
-                "$groupe :",
+                groupe,
                 style: const TextStyle(fontSize: 18),
               ),
+              const SizedBox(width: 10),
               Expanded(
                 child: SemaineList(
                     1,

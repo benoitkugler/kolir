@@ -103,25 +103,31 @@ class ColleW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final time = formatDateHeure(colle.date);
-    final text = showMatiere ? "${formatMatiere(colle.matiere)} : $time" : time;
+    final text = showMatiere
+        ? "${formatMatiere(colle.matiere, dense: true)} $time"
+        : time;
     return Padding(
-      padding: const EdgeInsets.all(4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
           color: colle.matiere.color,
           borderRadius: const BorderRadius.all(Radius.circular(4)),
         ),
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.only(left: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(text),
-            if (onDelete != null)
-              IconButton(
-                  splashRadius: 10,
-                  onPressed: onDelete,
-                  icon: deleteIcon,
-                  color: Colors.red)
+            onDelete == null
+                ? const SizedBox(
+                    height: 30,
+                    width: 10,
+                  )
+                : IconButton(
+                    splashRadius: 10,
+                    onPressed: onDelete,
+                    icon: deleteIcon,
+                    color: Colors.red)
           ],
         ),
       ),

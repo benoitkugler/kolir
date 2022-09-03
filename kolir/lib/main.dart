@@ -41,6 +41,7 @@ enum _ModeView { matieres, groupes, semaines }
 class _HomeState extends State<_Home> {
   Colloscope col = Colloscope.empty();
   var mode = _ModeView.matieres;
+  bool isDirty = false;
 
   @override
   void initState() {
@@ -60,6 +61,7 @@ class _HomeState extends State<_Home> {
     }
     setState(() {
       this.col = col;
+      isDirty = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Colloscope chargé."), backgroundColor: Colors.green));
@@ -68,24 +70,28 @@ class _HomeState extends State<_Home> {
   void addGroupe() {
     setState(() {
       col.addGroupe();
+      isDirty = true;
     });
   }
 
   void removeGroupe(GroupeID groupe) {
     setState(() {
       col.removeGroupe(groupe);
+      isDirty = true;
     });
   }
 
   void addCreneaux(Matiere mat, List<DateTime> hours, List<int> semaines) {
     setState(() {
       col.addCreneaux(mat, hours, semaines);
+      isDirty = true;
     });
   }
 
   void removeCreneau(Matiere mat, DateTime creneau) {
     setState(() {
       col.removeCreneau(mat, creneau);
+      isDirty = true;
     });
   }
 
@@ -93,6 +99,7 @@ class _HomeState extends State<_Home> {
       Matiere mat, GroupeID origin, PopulatedCreneau dst) {
     setState(() {
       col.attributeCreneau(mat, origin, dst);
+      isDirty = true;
     });
     return col.parMatiere();
   }
@@ -131,53 +138,111 @@ class _HomeState extends State<_Home> {
     }
   }
 
+  void _save() async {
+    final path = await col.save();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("Enregistré dans $path.")));
+  }
+
+  void _reload() async {
+    final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Confirmer"),
+            content: const Text(
+                "Etes-vous sûr de recharger le colloscope depuis le disque ?"),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text("Recharger"))
+            ],
+          );
+        });
+    if (confirm != null && confirm) {
+      _loadFromFile();
+    }
+  }
+
+  void _toogleView() {
+    setState(() {
+      mode = _ModeView.values[(mode.index + 1) % (_ModeView.values.length)];
+    });
+  }
+
+  void _clear() async {
+    final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Confirmer"),
+            content:
+                const Text("Etes-vous sûr d'effacer le colloscope actuel ?"),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text("Effacer"))
+            ],
+          );
+        });
+    if (confirm != null && confirm) {
+      setState(() {
+        col.reset();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Kolir - Edition du colloscope"),
         actions: [
-          ElevatedButton(
-              onPressed: () async {
-                final path = await col.save();
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Enregistré dans $path.")));
-              },
-              child: const Text("Enregistrer")),
-          ElevatedButton(onPressed: _export, child: const Text("Exporter")),
-          ElevatedButton(
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text("Confirmer"),
-                        content: const Text(
-                            "Etes vous sur d'effacer le colloscope actuel ?"),
-                        actions: [
-                          TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(true);
-                              },
-                              child: const Text("Effacer"))
-                        ],
-                      );
-                    });
-                if (confirm != null && confirm) {
-                  setState(() {
-                    col.reset();
-                  });
-                }
-              },
-              child: const Text("Effacer")),
-          ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  mode = _ModeView
-                      .values[(mode.index + 1) % (_ModeView.values.length)];
-                });
-              },
-              child: const Text("Mode"))
+          Tooltip(
+            message: "Passer à la vue suivante",
+            child: ElevatedButton.icon(
+                onPressed: _toogleView,
+                icon: const Icon(IconData(0xf028c,
+                    fontFamily: 'MaterialIcons', matchTextDirection: true)),
+                label: const Text("Changer de vue")),
+          ),
+          Tooltip(
+              message: "Exporter le colloscope au format HTML.",
+              child: ElevatedButton.icon(
+                  onPressed: _export,
+                  icon:
+                      const Icon(IconData(0xe201, fontFamily: 'MaterialIcons')),
+                  label: const Text("Exporter"))),
+          Tooltip(
+            message: "Sauvegarder le colloscope actuel sur le disque.",
+            child: ElevatedButton.icon(
+                onPressed: isDirty ? _save : null,
+                icon: const Icon(IconData(0xe550, fontFamily: 'MaterialIcons')),
+                label: const Text("Enregistrer")),
+          ),
+          Tooltip(
+            message: "Revenir à la dernière sauvegarde.",
+            child: ElevatedButton.icon(
+                onPressed: isDirty ? _reload : null,
+                icon: const Icon(
+                  IconData(0xf010a, fontFamily: 'MaterialIcons'),
+                  color: Colors.orange,
+                ),
+                label: const Text("Annuler")),
+          ),
+          Tooltip(
+              message: "Vider entièrement le colloscope.",
+              child: ElevatedButton.icon(
+                  onPressed: _clear,
+                  icon: const Icon(
+                    IconData(0xf645, fontFamily: 'MaterialIcons'),
+                    color: Colors.red,
+                  ),
+                  label: const Text("Effacer"))),
         ],
       ),
       body: body,
