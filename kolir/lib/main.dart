@@ -33,25 +33,8 @@ class _Home extends StatefulWidget {
 
 enum _ModeView { matieres, groupes, semaines }
 
-final l = [DateTime(2022, 9, 6, 10, 30), DateTime(2022, 9, 15, 19, 30)];
-
-final sample = Colloscope({
-  "G1": {
-    Matiere.maths: l,
-    Matiere.allemand: l,
-  },
-  "G2": {
-    Matiere.maths: l,
-    Matiere.allemand: l,
-  },
-  "G3": {
-    Matiere.maths: l,
-    Matiere.allemand: l,
-  }
-}, DateTime(2022, 9, 5));
-
 class _HomeState extends State<_Home> {
-  Colloscope col = sample;
+  Colloscope col = Colloscope.empty();
   var mode = _ModeView.matieres;
 
   @override

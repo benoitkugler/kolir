@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// NoGroup est une valeur spéciale utilisée pour
@@ -14,13 +15,19 @@ const NoGroup = "";
 /// sous différente formes (par matière, par semaine, par élève)
 class Colloscope {
   /// les groupes sont identifiés par leur index
-  Map<GroupeID, HeuresGroupe> groupes;
+  Map<GroupeID, HeuresGroupe> _groupes;
 
   /// date du lundi de la premiere semaine (Semaine 1)
   DateTime debut;
 
-  Colloscope(this.groupes, this.debut) {
-    assert(groupes.values.every((element) =>
+  /// premiereSemaine est le numéro externe de la première semaine interne
+  /// (indexée par 0)
+  int premiereSemaine;
+
+  Colloscope(this._groupes, this.debut, {this.premiereSemaine = 1}) {
+    assert(premiereSemaine >= 1);
+
+    assert(_groupes.values.every((element) =>
         element.values.every((dts) => dts.every((dt) => dt.isAfter(debut)))));
 
     assert(debut.weekday == DateTime.monday);
@@ -29,10 +36,18 @@ class Colloscope {
     assert(debut.second == 0);
   }
 
+  factory Colloscope.empty() {
+    var now = DateTime.now();
+    now = DateTime(now.year, now.month, now.day); // remove hour, minutes, ...
+    now = now.subtract(Duration(days: now.weekday - 1)); // shift to monday
+    return Colloscope({}, now);
+  }
+
   Map<String, dynamic> toJson() {
     return {
-      "groupes": groupes.map((k, v) => MapEntry(k, v.toJson())),
+      "groupes": _groupes.map((k, v) => MapEntry(k, v.toJson())),
       "debut": debut.toIso8601String(),
+      "premiereSemaine": premiereSemaine,
     };
   }
 
@@ -40,12 +55,13 @@ class Colloscope {
     return Colloscope(
       (json["groupes"] as Map).map((k, v) => MapEntry(k, HG.fromJson(v))),
       DateTime.parse(json["debut"]),
+      premiereSemaine: (json["premiereSemaine"] ?? 1) as int,
     );
   }
 
   static Future<File> get _saveFile async {
     final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/kolir.json';
+    final path = join(directory.path, "kolir.json");
     return File(path);
   }
 
@@ -53,13 +69,6 @@ class Colloscope {
     final file = await _saveFile;
     await file.writeAsString(jsonEncode(toJson()));
     return file.path;
-  }
-
-  factory Colloscope.empty() {
-    var now = DateTime.now();
-    now = DateTime(now.year, now.month, now.day);
-    now = now.subtract(Duration(days: now.weekday - 1));
-    return Colloscope({}, now);
   }
 
   static Future<Colloscope> load() async {
@@ -75,9 +84,9 @@ class Colloscope {
     return Colloscope.fromJson(jsonDecode(contents));
   }
 
-  /// [week] renvoie l'index de la semaine par rapport à debut :
+  /// [_week] renvoie l'index de la semaine par rapport à debut :
   /// ```week(debut) == 0```
-  int week(DateTime date) {
+  int _week(DateTime date) {
     return date.difference(debut).inDays ~/ 7; // starting at zero
   }
 
@@ -85,12 +94,12 @@ class Colloscope {
   /// contigue de semaines
   List<VueSemaine> parSemaine() {
     final semaines = <int, VueSemaine>{};
-    for (var groupeEntry in groupes.entries) {
+    for (var groupeEntry in _groupes.entries) {
       final groupe = groupeEntry.value;
       for (var element in groupe.entries) {
         final matiere = element.key;
         for (var date in element.value) {
-          final weekIndex = week(date);
+          final weekIndex = _week(date);
           final semaine = semaines.putIfAbsent(weekIndex, () => {});
           final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
           groupesParMatiere.add(groupeEntry.key);
@@ -102,12 +111,12 @@ class Colloscope {
 
   /// les créneaux non attribués sont ignorés
   Map<GroupeID, VueGroupe> parGroupe() {
-    final out = groupes.map((k, e) {
+    final out = _groupes.map((k, e) {
       final semaines = <int, List<Colle>>{};
       for (var element in e.entries) {
         final matiere = element.key;
         for (var date in element.value) {
-          final weekIndex = week(date);
+          final weekIndex = _week(date);
           final semaine = semaines.putIfAbsent(weekIndex, () => []);
           semaine.add(Colle(date, matiere));
         }
@@ -120,12 +129,12 @@ class Colloscope {
 
   Map<Matiere, VueMatiere> parMatiere() {
     final tmp = <Matiere, Map<int, List<PopulatedCreneau>>>{};
-    for (var groupItem in groupes.entries) {
+    for (var groupItem in _groupes.entries) {
       for (var item in groupItem.value.entries) {
         final matiere = item.key;
         final semaines = tmp.putIfAbsent(matiere, () => {});
         for (var date in item.value) {
-          final weekIndex = week(date);
+          final weekIndex = _week(date);
           final semaine = semaines.putIfAbsent(weekIndex, () => []);
           semaine.add(PopulatedCreneau(date, groupItem.key));
         }
@@ -141,32 +150,32 @@ class Colloscope {
   }
 
   void reset() {
-    groupes = {};
+    _groupes = {};
   }
 
   void addGroupe() {
-    int serial = groupes.length + 1;
-    if (groupes.containsKey(NoGroup)) {
+    int serial = _groupes.length + 1;
+    if (_groupes.containsKey(NoGroup)) {
       serial -= 1;
     }
     String id = "Groupe $serial";
-    while (groupes.containsKey(id)) {
+    while (_groupes.containsKey(id)) {
       serial += 1;
       id = "Groupe $serial";
     }
-    groupes[id] = {};
+    _groupes[id] = {};
   }
 
   /// removeGroupe supprime le groupe donné
   /// les créneaux liés ne sont pas supprimés
   void removeGroupe(GroupeID id) {
-    final group = groupes.remove(id);
+    final group = _groupes.remove(id);
     if (group == null) {
       return;
     }
 
     // ajoute les créneaux à NoGroup
-    final nogroup = groupes.putIfAbsent(NoGroup, () => {});
+    final nogroup = _groupes.putIfAbsent(NoGroup, () => {});
     for (var entry in group.entries) {
       final matiere = entry.key;
       final l = nogroup.putIfAbsent(matiere, () => []);
@@ -191,14 +200,14 @@ class Colloscope {
     }
 
     // add into NoGroup
-    final l = groupes.putIfAbsent(NoGroup, () => {});
+    final l = _groupes.putIfAbsent(NoGroup, () => {});
     final lmat = l.putIfAbsent(mat, () => []);
     lmat.addAll(finalTimes);
   }
 
   /// removeCreneau supprime le creneau pour tous les groupes
   void removeCreneau(Matiere mat, DateTime creneau) {
-    for (var groupe in groupes.values) {
+    for (var groupe in _groupes.values) {
       final l = groupe[mat] ?? [];
       l.remove(creneau);
     }
@@ -207,12 +216,12 @@ class Colloscope {
   /// attributeCreneau assigne le créneau donné au groupe donné,
   /// retirant le groupe précédent si nécessaire
   void attributeCreneau(Matiere mat, GroupeID origin, PopulatedCreneau dst) {
-    final group = groupes.putIfAbsent(origin, () => {});
+    final group = _groupes.putIfAbsent(origin, () => {});
     final matList = group.putIfAbsent(mat, () => []);
     matList.add(dst.date);
 
     // cleanup the given creneau
-    final oldGroup = groupes[dst.groupeID] ?? {};
+    final oldGroup = _groupes[dst.groupeID] ?? {};
     final oldMatList = oldGroup[mat] ?? [];
     oldMatList.remove(dst.date);
   }
