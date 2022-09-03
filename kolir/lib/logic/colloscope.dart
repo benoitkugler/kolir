@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -122,6 +123,9 @@ class Colloscope {
           semaine.add(Colle(date, matiere));
         }
       }
+      for (var l in semaines.values) {
+        l.sort((a, b) => a.matiere.index - b.matiere.index);
+      }
       return MapEntry(k, _semaineMapToList(semaines, <Colle>[]));
     });
     out.remove(NoGroup);
@@ -214,17 +218,24 @@ class Colloscope {
     }
   }
 
-  /// attributeCreneau assigne le créneau donné au groupe donné,
-  /// retirant le groupe précédent si nécessaire
-  void attributeCreneau(Matiere mat, GroupeID origin, PopulatedCreneau dst) {
-    final group = _groupes.putIfAbsent(origin, () => {});
-    final matList = group.putIfAbsent(mat, () => []);
-    matList.add(dst.date);
+  /// attributeCreneau assigne le créneau [dst] au groupe [src],
+  /// inversant les affectations précédentes
+  void attributeCreneau(
+      Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
+    final srcGroup = _groupes.putIfAbsent(src.groupeID, () => {});
+    final srcMatList = srcGroup.putIfAbsent(mat, () => []);
+    if (!isEmptyDate(src.date)) {
+      srcMatList.remove(src.date);
+    }
+    srcMatList.add(dst.date);
 
-    // cleanup the given creneau
-    final oldGroup = _groupes[dst.groupeID] ?? {};
-    final oldMatList = oldGroup[mat] ?? [];
-    oldMatList.remove(dst.date);
+    // dst.groupID may be NoGroup
+    final dstGroup = _groupes.putIfAbsent(dst.groupeID, () => {});
+    final dstMatList = dstGroup.putIfAbsent(mat, () => []);
+    dstMatList.remove(dst.date);
+    if (!isEmptyDate(src.date)) {
+      dstMatList.add(src.date);
+    }
   }
 }
 

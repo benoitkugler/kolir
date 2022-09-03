@@ -96,9 +96,9 @@ class _HomeState extends State<_Home> {
   }
 
   Creneaux attributeCreneau(
-      Matiere mat, GroupeID origin, PopulatedCreneau dst) {
+      Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
     setState(() {
-      col.attributeCreneau(mat, origin, dst);
+      col.attributeCreneau(mat, src, dst);
       isDirty = true;
     });
     return col.parMatiere();

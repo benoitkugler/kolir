@@ -62,3 +62,11 @@ String formatMatiere(Matiere mat, {dense = false}) {
       return "Philosophie";
   }
 }
+
+DateTime emptyDate() {
+  return DateTime.fromMillisecondsSinceEpoch(0);
+}
+
+bool isEmptyDate(DateTime dt) {
+  return dt.millisecondsSinceEpoch == 0;
+}

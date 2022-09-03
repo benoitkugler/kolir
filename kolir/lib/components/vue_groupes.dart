@@ -13,7 +13,8 @@ class VueGroupeW extends StatelessWidget {
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
 
-  final Creneaux Function(Matiere mat, GroupeID origin, PopulatedCreneau dst)
+  final Creneaux Function(
+          Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
       onAttributeCreneau;
 
   const VueGroupeW(this.groupes, this.creneaux,
@@ -44,9 +45,12 @@ class VueGroupeW extends StatelessWidget {
             icon: const Icon(IconData(0xe047, fontFamily: 'MaterialIcons')),
             label: const Text("Ajouter un groupe")),
         const SizedBox(width: 10),
-        ElevatedButton(
-            onPressed: () => showEditPassages(context),
-            child: const Text("Modifier les passages"))
+        Tooltip(
+          message: "Changer l'attribution des groupes",
+          child: ElevatedButton(
+              onPressed: () => showEditPassages(context),
+              child: const Text("Modifier les passages")),
+        )
       ],
       child: Expanded(
         child: ListView(
@@ -112,7 +116,8 @@ class _GroupesCreneaux extends StatefulWidget {
   final List<GroupeID> groupes;
   final Map<Matiere, VueMatiere> creneaux;
 
-  final Creneaux Function(Matiere mat, GroupeID origin, PopulatedCreneau dst)
+  final Creneaux Function(
+          Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
       onAttributeCreneau;
 
   const _GroupesCreneaux(this.groupes, this.creneaux, this.onAttributeCreneau,
@@ -157,11 +162,18 @@ class _GroupesCreneauxState extends State<_GroupesCreneaux> {
         child: Column(
           children: [
             DropdownButton(
-                hint: const Text("Choisir la matière..."),
+                borderRadius: BorderRadius.all(Radius.circular(4)),
+                hint: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text("Choisir la matière..."),
+                ),
                 items: Matiere.values
                     .map((e) => DropdownMenuItem(
                           value: e,
-                          child: Text(formatMatiere(e)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(formatMatiere(e)),
+                          ),
                         ))
                     .toList(),
                 value: matiere,
@@ -186,7 +198,8 @@ class _MatiereCreneaux extends StatelessWidget {
   final List<GroupeID> groupes;
   final VueMatiere creneaux;
 
-  final void Function(GroupeID origin, PopulatedCreneau dst) onAttributeCreneau;
+  final void Function(PopulatedCreneau src, PopulatedCreneau dst)
+      onAttributeCreneau;
 
   const _MatiereCreneaux(
       this.matiere, this.groupes, this.creneaux, this.onAttributeCreneau,
@@ -198,11 +211,25 @@ class _MatiereCreneaux extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-            child: ListView(
-                shrinkWrap: true,
-                children: groupes.map((e) => _DraggableGroup(e)).toList())),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Groupes",
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              ListView(
+                  shrinkWrap: true,
+                  children: groupes
+                      .map((e) =>
+                          _DraggableGroup(PopulatedCreneau(emptyDate(), e)))
+                      .toList()),
+            ],
+          ),
+        ),
         Expanded(
-          flex: 5,
+          flex: 8,
           child: _MatiereW(matiere, creneaux, onAttributeCreneau),
         ),
       ],
@@ -211,27 +238,38 @@ class _MatiereCreneaux extends StatelessWidget {
 }
 
 class _DraggableGroup extends StatelessWidget {
-  final GroupeID group;
-  const _DraggableGroup(this.group, {super.key});
+  final PopulatedCreneau group; // date is optional
+  final bool dense;
+  const _DraggableGroup(this.group, {super.key, this.dense = false});
 
   @override
   Widget build(BuildContext context) {
     return Draggable(
+        dragAnchorStrategy: pointerDragAnchorStrategy,
         data: group,
         feedback: Card(
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(4))),
-            child: Text(group),
+            child: Text(
+              group.groupeID,
+            ),
           ),
         ),
         child: Card(
+          margin: dense
+              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 0)
+              : null,
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding:
+                EdgeInsets.symmetric(horizontal: 8, vertical: dense ? 2 : 8),
             decoration: const BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(4))),
-            child: Text(group),
+            child: Text(
+              group.groupeID,
+              textAlign: TextAlign.center,
+            ),
           ),
         ));
   }
@@ -241,7 +279,8 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
 
-  final void Function(GroupeID origin, PopulatedCreneau dst) onAttributeCreneau;
+  final void Function(PopulatedCreneau src, PopulatedCreneau dst)
+      onAttributeCreneau;
 
   const _MatiereW(this.matiere, this.semaines, this.onAttributeCreneau,
       {super.key});
@@ -260,7 +299,7 @@ class _MatiereW extends StatelessWidget {
                             (e) => _Creneau(
                                 Colle(e.date, matiere),
                                 e.groupeID == NoGroup ? null : e.groupeID,
-                                (origin) => onAttributeCreneau(origin, e)),
+                                (src) => onAttributeCreneau(src, e)),
                           )
                           .toList(),
                     ))
@@ -274,7 +313,7 @@ class _Creneau extends StatelessWidget {
   final Colle colle;
   final GroupeID? group;
 
-  final void Function(GroupeID origin) onAttributeCreneau;
+  final void Function(PopulatedCreneau src) onAttributeCreneau;
 
   // final void Function()? onDelete;
 
@@ -283,22 +322,38 @@ class _Creneau extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final time = formatDateHeure(colle.date);
-    final text = group == null ? time : "$time : $group";
     return Padding(
       padding: const EdgeInsets.all(4.0),
-      child: DragTarget<GroupeID>(
+      child: DragTarget<PopulatedCreneau>(
         builder: (context, candidateData, rejectedData) {
           return Container(
               decoration: BoxDecoration(
-                color: colle.matiere.color,
+                boxShadow: candidateData.isNotEmpty
+                    ? [
+                        BoxShadow(
+                            color: colle.matiere.color.withOpacity(0.5),
+                            blurRadius: 2,
+                            spreadRadius: 2)
+                      ]
+                    : [],
                 borderRadius: const BorderRadius.all(Radius.circular(4)),
                 border: Border.all(
-                    color: candidateData.isNotEmpty
-                        ? Colors.black
-                        : Colors.transparent),
+                    color: candidateData.isNotEmpty || group != null
+                        ? colle.matiere.color
+                        : Colors.black),
               ),
               padding: const EdgeInsets.all(8),
-              child: Text(text));
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(time, style: const TextStyle(fontSize: 12)),
+                SizedBox(
+                    height: 20,
+                    child: group != null
+                        ? _DraggableGroup(
+                            PopulatedCreneau(colle.date, group!),
+                            dense: true,
+                          )
+                        : null)
+              ]));
         },
         onAccept: onAttributeCreneau,
       ),
