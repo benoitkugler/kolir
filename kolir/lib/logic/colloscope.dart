@@ -253,6 +253,45 @@ class Colloscope {
       noGroupMap.addAll(toRemove);
     }
   }
+
+  /// [attribueRegulier] remplie les créneaux disponibles dans la matière [mat]
+  /// en commençant par [premierGroupe] -> [premierCreneau]
+  void attribueRegulier(
+      Matiere mat, GroupeID premierGroupe, DateTime premierCreneau) {
+    final nogroup = _groupes[NoGroup] ?? {};
+    final disponibles = nogroup.putIfAbsent(mat, () => []);
+    disponibles.sort();
+    var currentIndex = disponibles.indexOf(premierCreneau);
+    if (currentIndex == -1) {
+      return;
+    }
+
+    final groupes =
+        _groupes.keys.where((element) => element != NoGroup).toList();
+    groupes.sort();
+
+    var currentGroupeIndex = groupes.indexOf(premierGroupe);
+    if (currentGroupeIndex == -1) {
+      return;
+    }
+
+    // to simplify, build the list of available creaneaux, starting at currentIndex
+    final ordered = [
+      ...disponibles.sublist(currentIndex),
+      ...disponibles.sublist(0, currentIndex)
+    ];
+    for (var creneau in ordered) {
+      final currentGroupe = groupes[currentGroupeIndex % groupes.length];
+      final gr = _groupes.putIfAbsent(currentGroupe, () => {});
+      final matList = gr.putIfAbsent(mat, () => []);
+      matList.add(creneau);
+
+      currentGroupeIndex += 1; // iterate in parallel
+    }
+
+    // clear the NoGroup group
+    disponibles.clear();
+  }
 }
 
 typedef GroupeID = String;

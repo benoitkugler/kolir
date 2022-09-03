@@ -110,6 +110,15 @@ class _HomeState extends State<_Home> {
     return col.parMatiere();
   }
 
+  Creneaux attribueRegulier(
+      Matiere mat, GroupeID premierGroupe, DateTime premierCreneau) {
+    setState(() {
+      col.attribueRegulier(mat, premierGroupe, premierCreneau);
+      isDirty = true;
+    });
+    return col.parMatiere();
+  }
+
   void _export() async {
     final matieres = matieresToHTML(col);
     final groupes = groupesToHTML(col);
@@ -133,12 +142,14 @@ class _HomeState extends State<_Home> {
         return VueSemaineW(col.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
+          col.premiereSemaine,
           col.parGroupe(),
           col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
           onAttributeCreneau: attributeCreneau,
           onClearCreneaux: clearCreneaux,
+          onAttribueRegulier: attribueRegulier,
         );
       case ModeView.matieres:
         return VueMatiereW(col.parMatiere(), addCreneaux, removeCreneau);
