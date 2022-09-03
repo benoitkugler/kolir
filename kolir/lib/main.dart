@@ -39,6 +39,8 @@ class _Home extends StatefulWidget {
 class _HomeState extends State<_Home> {
   Colloscope col = Colloscope.empty();
   var mode = ModeView.matieres;
+  final notesController = TextEditingController();
+
   bool isDirty = false;
 
   @override
@@ -59,6 +61,7 @@ class _HomeState extends State<_Home> {
     }
     setState(() {
       this.col = col;
+      notesController.text = col.notes;
       isDirty = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -160,6 +163,9 @@ class _HomeState extends State<_Home> {
     final path = await col.save();
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text("Enregistré dans $path.")));
+    setState(() {
+      isDirty = false;
+    });
   }
 
   void _reload() async {
@@ -188,6 +194,54 @@ class _HomeState extends State<_Home> {
     setState(() {
       mode = ModeView.values[(mode.index + 1) % (ModeView.values.length)];
     });
+  }
+
+  void _saveNotes() async {
+    col.notes = notesController.text;
+    await col.save();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Notes enregistrées.")));
+  }
+
+  void _editNotes() async {
+    final save = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return Dialog(
+              child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Card(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        const Text(
+                          "Editer les notes",
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: TextFormField(
+                              controller: notesController,
+                              decoration: const InputDecoration(
+                                  label: Text("Notes libres")),
+                              maxLines: 20),
+                        ),
+                        Row(
+                          children: [
+                            const Spacer(),
+                            ElevatedButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text("Enregistrer"))
+                          ],
+                        )
+                      ],
+                    ),
+                  )));
+        });
+    if (save != null && save) {
+      _saveNotes();
+    }
   }
 
   void _clear() async {
@@ -246,6 +300,14 @@ class _HomeState extends State<_Home> {
                   color: isDirty ? Colors.orange : Colors.grey,
                 ),
                 label: const Text("Annuler")),
+          ),
+          Tooltip(
+            message: "Modifier les notes",
+            child: IconButton(
+                splashRadius: 15,
+                onPressed: _editNotes,
+                icon:
+                    const Icon(IconData(0xf030f, fontFamily: 'MaterialIcons'))),
           ),
           Tooltip(
               message: "Vider entièrement le colloscope.",

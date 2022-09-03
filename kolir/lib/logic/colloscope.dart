@@ -25,7 +25,11 @@ class Colloscope {
   /// (indexée par 0)
   int premiereSemaine;
 
-  Colloscope(this._groupes, this.debut, {this.premiereSemaine = 1}) {
+  /// [notes] est un champ de texte libre.
+  String notes;
+
+  Colloscope(this._groupes, this.debut,
+      {this.premiereSemaine = 1, this.notes = ""}) {
     assert(premiereSemaine >= 1);
 
     assert(_groupes.values.every((element) =>
@@ -49,15 +53,16 @@ class Colloscope {
       "groupes": _groupes.map((k, v) => MapEntry(k, v.toJson())),
       "debut": debut.toIso8601String(),
       "premiereSemaine": premiereSemaine,
+      "notes": notes,
     };
   }
 
   factory Colloscope.fromJson(Map<String, dynamic> json) {
     return Colloscope(
-      (json["groupes"] as Map).map((k, v) => MapEntry(k, HG.fromJson(v))),
-      DateTime.parse(json["debut"]),
-      premiereSemaine: (json["premiereSemaine"] ?? 1) as int,
-    );
+        (json["groupes"] as Map).map((k, v) => MapEntry(k, HG.fromJson(v))),
+        DateTime.parse(json["debut"]),
+        premiereSemaine: (json["premiereSemaine"] ?? 1) as int,
+        notes: json["notes"] ?? "");
   }
 
   static Future<File> get _saveFile async {
