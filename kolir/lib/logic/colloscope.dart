@@ -102,7 +102,7 @@ class Colloscope {
           final weekIndex = _week(date);
           final semaine = semaines.putIfAbsent(weekIndex, () => {});
           final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
-          groupesParMatiere.add(groupeEntry.key);
+          groupesParMatiere.add(PopulatedCreneau(date, groupeEntry.key));
         }
       }
     }
@@ -276,7 +276,7 @@ extension HMG on HeuresMatiereGroupe {
   }
 }
 
-typedef VueSemaine = Map<Matiere, List<GroupeID>>;
+typedef VueSemaine = Map<Matiere, List<PopulatedCreneau>>;
 
 typedef VueMatiere = List<List<PopulatedCreneau>>; // semaine -> colle
 

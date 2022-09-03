@@ -32,7 +32,7 @@ class _SemaineBody extends StatelessWidget {
       children: Matiere.values
           .map((e) => Column(
               children: (semaine[e] ?? [])
-                  .map((groupID) => _Group(groupID, e.color))
+                  .map((creneau) => _Group(creneau.groupeID, e.color))
                   .toList()))
           .toList(),
     );

@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:ui';
 
+import 'package:kolir/logic/colloscope.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -19,7 +21,7 @@ const _template = """
       }
 
       @page {
-        padding: 10px 20px;
+        padding: 5px 10px;
       }
 
       table {
@@ -33,7 +35,7 @@ const _template = """
 
       th,
       td {
-        padding: 10px;
+        padding: 2px;
       }
 
       tr:nth-child(even) {
@@ -47,6 +49,8 @@ const _template = """
         padding: 2px;
         margin: 2px;
       }
+
+      /* STYLE */
     </style>
   </head>
   <body>
@@ -55,13 +59,16 @@ const _template = """
 </html>
 """;
 
-String fillTemplate(List<String> pages) {
+String fillTemplate(List<String> pages, {String additionalStyle = ""}) {
   const pageBreaker = """
   <div class="pagebreak"> </div>
   """; // sync with <style>
   final body = pages.join(pageBreaker);
   const bodyMarker = "<!-- BODY -->";
-  return _template.replaceAll(bodyMarker, body);
+  const styleMarker = "/* STYLE */";
+  return _template
+      .replaceFirst(bodyMarker, body)
+      .replaceFirst(styleMarker, additionalStyle);
 }
 
 Future<String> saveDocument(String content, String name) async {
@@ -69,4 +76,20 @@ Future<String> saveDocument(String content, String name) async {
   final file = File(join(directory.path, name));
   await file.writeAsString(content);
   return file.path;
+}
+
+String _colorToHTML(Color color) {
+  return "rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})";
+}
+
+/// [colors] is the list of the colors class for each matieres
+/// with name matiere-<index>
+String cssMatieresColorDefinition(List<Color> colors) {
+  assert(colors.length == Matiere.values.length);
+
+  final classes = List<String>.generate(
+      Matiere.values.length,
+      (index) =>
+          ".matiere-$index { background-color: ${_colorToHTML(colors[index])}; }");
+  return classes.join("\n");
 }
