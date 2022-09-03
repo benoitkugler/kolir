@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/vue_groupes.dart';
 import 'package:kolir/components/vue_matieres.dart';
 import 'package:kolir/components/vue_semaines.dart';
 import 'package:kolir/logic/colloscope.dart';
+import 'package:kolir/logic/export/groupes.dart';
+import 'package:kolir/logic/export/matieres.dart';
+import 'package:kolir/logic/export/semaines.dart';
+import 'package:kolir/logic/export/utils.dart';
 
 void main() async {
   runApp(const _App());
@@ -92,6 +97,23 @@ class _HomeState extends State<_Home> {
     return col.parMatiere();
   }
 
+  void _export() async {
+    final matieres = matieresToHTML(col);
+    final groupes = groupesToHTML(col);
+    final semaines = semainesToHTML(col, matieresColors);
+
+    final matieresPath =
+        await saveDocument(matieres, "colloscope_matieres.html");
+    final groupesPath = await saveDocument(groupes, "colloscope_groupes.html");
+    final semainesPath =
+        await saveDocument(semaines, "colloscope_semaines.html");
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath"),
+        backgroundColor: Colors.green));
+  }
+
   Widget get body {
     switch (mode) {
       case _ModeView.semaines:
@@ -122,6 +144,7 @@ class _HomeState extends State<_Home> {
                     SnackBar(content: Text("Enregistré dans $path.")));
               },
               child: const Text("Enregistrer")),
+          ElevatedButton(onPressed: _export, child: const Text("Exporter")),
           ElevatedButton(
               onPressed: () async {
                 final confirm = await showDialog<bool>(

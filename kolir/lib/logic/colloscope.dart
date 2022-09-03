@@ -67,7 +67,8 @@ class Colloscope {
 
   Future<String> save() async {
     final file = await _saveFile;
-    await file.writeAsString(jsonEncode(toJson()));
+    await file
+        .writeAsString(const JsonEncoder.withIndent(" ").convert(toJson()));
     return file.path;
   }
 
@@ -158,10 +159,10 @@ class Colloscope {
     if (_groupes.containsKey(NoGroup)) {
       serial -= 1;
     }
-    String id = "Groupe $serial";
+    String id = "G$serial";
     while (_groupes.containsKey(id)) {
       serial += 1;
-      id = "Groupe $serial";
+      id = "G$serial";
     }
     _groupes[id] = {};
   }

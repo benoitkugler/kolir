@@ -16,7 +16,7 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
     final matieres = Matiere.values.map((mat) {
       final colles = semaine[mat] ?? [];
       final creneaux = colles.map((e) =>
-          "<div class='chip matiere-${mat.index}'>${e.groupeID} ${formatDateHeure(e.date, dense: true)}</div>");
+          "<div class='chip matiere-${mat.index}'><i>${e.groupeID}</i> ${formatDateHeure(e.date, dense: true)}</div>");
       return "<td>${creneaux.join('')}</td>";
     });
 

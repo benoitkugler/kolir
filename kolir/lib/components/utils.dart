@@ -2,24 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/utils.dart';
 
+final matieresColors = [
+  Colors.blue.shade200,
+  Colors.green.shade200,
+  Colors.orange.shade300,
+  Colors.yellow.shade300,
+  Colors.pink.shade300,
+  Colors.purple.shade300,
+  Colors.teal.shade300,
+];
+
 extension ColorM on Matiere {
   Color get color {
-    switch (this) {
-      case Matiere.maths:
-        return Colors.blue.shade200;
-      case Matiere.esh:
-        return Colors.green.shade200;
-      case Matiere.anglais:
-        return Colors.orange.shade300;
-      case Matiere.allemand:
-        return Colors.yellow.shade300;
-      case Matiere.espagnol:
-        return Colors.pink.shade300;
-      case Matiere.francais:
-        return Colors.purple.shade300;
-      case Matiere.philo:
-        return Colors.teal.shade300;
-    }
+    return matieresColors[index];
   }
 }
 
