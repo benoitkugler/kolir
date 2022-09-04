@@ -51,7 +51,12 @@ class _MatiereW extends StatelessWidget {
     showDialog(
         context: context,
         builder: (context) {
-          return WeekCalendar(onAdd);
+          return WeekCalendar(
+            (creneaux, semaines) {
+              Navigator.of(context).pop();
+              onAdd(creneaux, semaines);
+            },
+          );
         });
   }
 

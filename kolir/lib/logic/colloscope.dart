@@ -10,7 +10,18 @@ import 'package:path_provider/path_provider.dart';
 /// les créneaux non prévus mais non attribués à un groupe.
 const NoGroup = "";
 
-typedef Collisions = Map<GroupeID, Map<DateTime, List<Matiere>>>;
+typedef Collisions = Map<DateHeure, List<Matiere>>;
+
+/// [Diagnostic] indique les problèmes de la répartition courante,
+/// pour un groupe.
+class Diagnostic {
+  /// (au moins) deux créneaux en même temps.
+  final Collisions collisions;
+
+  /// semaine public
+  final List<int> semainesChargees;
+  const Diagnostic(this.collisions, this.semainesChargees);
+}
 
 /// [Colloscope] est la représentation en mémoire vive
 /// d'un colloscope.
@@ -99,6 +110,11 @@ class Colloscope {
     return date.difference(debut).inDays ~/ 7; // starting at zero
   }
 
+  DateHeure _publy(DateTime date) {
+    return DateHeure(
+        _week(date) + premiereSemaine, date.weekday, date.hour, date.minute);
+  }
+
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
   List<VueSemaine> parSemaine() {
@@ -118,23 +134,25 @@ class Colloscope {
     return _semaineMapToList(semaines, {});
   }
 
+  VueGroupe _groupeSemaines(GroupeID groupe) {
+    final semaines = <int, List<Colle>>{};
+    for (var element in _groupes[groupe]!.entries) {
+      final matiere = element.key;
+      for (var date in element.value) {
+        final weekIndex = _week(date);
+        final semaine = semaines.putIfAbsent(weekIndex, () => []);
+        semaine.add(Colle(date, matiere));
+      }
+    }
+    for (var l in semaines.values) {
+      l.sort((a, b) => a.matiere.index - b.matiere.index);
+    }
+    return _semaineMapToList(semaines, <Colle>[]);
+  }
+
   /// les créneaux non attribués sont ignorés
   Map<GroupeID, VueGroupe> parGroupe() {
-    final out = _groupes.map((k, e) {
-      final semaines = <int, List<Colle>>{};
-      for (var element in e.entries) {
-        final matiere = element.key;
-        for (var date in element.value) {
-          final weekIndex = _week(date);
-          final semaine = semaines.putIfAbsent(weekIndex, () => []);
-          semaine.add(Colle(date, matiere));
-        }
-      }
-      for (var l in semaines.values) {
-        l.sort((a, b) => a.matiere.index - b.matiere.index);
-      }
-      return MapEntry(k, _semaineMapToList(semaines, <Colle>[]));
-    });
+    final out = _groupes.map((k, e) => MapEntry(k, _groupeSemaines(k)));
     out.remove(NoGroup);
     return out;
   }
@@ -161,29 +179,58 @@ class Colloscope {
         .map((e) => MapEntry(e, _semaineMapToList(tmp[e] ?? {}, []))));
   }
 
-  /// [checkDoublePresence] renvoie une liste de groupes assitant à (au moins) deux créneaux
-  /// en même temps. Un colloscope valide devrait renvoyer une liste vide.
-  Collisions checkDoublePresence() {
-    final Collisions out = {};
+  /// [diagnostics] renvoie une liste de groupes posant problème.
+  /// Un colloscope valide devrait renvoyer une liste vide.
+  Map<GroupeID, Diagnostic> diagnostics() {
+    final Map<GroupeID, Diagnostic> out = {};
     for (var item in _groupes.entries) {
       final group = item.key;
       if (group == NoGroup) {
         continue;
       }
-      final parCreneau = <DateTime, List<Matiere>>{};
+
+      // collisions
+      final parCreneau = <DateHeure, List<Matiere>>{};
       for (var mat in item.value.entries) {
         for (var date in mat.value) {
-          final l = parCreneau.putIfAbsent(date, () => []);
+          final l = parCreneau.putIfAbsent(_publy(date), () => []);
           l.add(mat.key);
         }
       }
-      final problemes =
+      final collisions =
           parCreneau.entries.where((element) => element.value.length > 1);
-      if (problemes.isNotEmpty) {
-        out[group] = Map.fromEntries(problemes);
+
+      // surchage : on calcule le nombre moyen de colles par semaine
+      final parSemaine = _groupeSemaines(group);
+      final nbColles = parSemaine.isEmpty
+          ? 0
+          : parSemaine
+              .map((e) => e.length)
+              .reduce((value, element) => value + element);
+      final nbWeeks = parSemaine.length;
+      final average = nbColles / nbWeeks;
+      // plus de 1 d'écart -> surcharge
+      final semainesChargees =
+          List<int>.generate(parSemaine.length, (index) => index)
+              .where((index) => parSemaine[index].length > average.ceil() + 1)
+              .map((e) => e + premiereSemaine)
+              .toList();
+
+      if (collisions.isNotEmpty || semainesChargees.isNotEmpty) {
+        out[group] =
+            Diagnostic(Collisions.fromEntries(collisions), semainesChargees);
       }
     }
     return out;
+  }
+
+  /// [nbCreneauxVaccants] renvoie le nombre de créneaux définis mais non
+  /// attribués à un groupe
+  int nbCreneauxVaccants() {
+    return (_groupes[NoGroup] ?? {})
+        .values
+        .map((l) => l.length)
+        .reduce((value, element) => value + element);
   }
 
   void reset() {

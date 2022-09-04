@@ -142,12 +142,12 @@ class _HomeState extends State<_Home> {
   Widget get body {
     switch (mode) {
       case ModeView.semaines:
-        return VueSemaineW(col.parSemaine());
+        return VueSemaineW(col.nbCreneauxVaccants(), col.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
           col.premiereSemaine,
           col.parGroupe(),
-          col.checkDoublePresence(),
+          col.diagnostics(),
           col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
@@ -191,9 +191,9 @@ class _HomeState extends State<_Home> {
     }
   }
 
-  void _toogleView() {
+  void _toogleView(ModeView mode) {
     setState(() {
-      mode = ModeView.values[(mode.index + 1) % (ModeView.values.length)];
+      this.mode = mode;
     });
   }
 
@@ -329,8 +329,8 @@ class _HomeState extends State<_Home> {
         ],
       ),
       body: NotificationListener<ViewNotification>(
-          onNotification: (_) {
-            _toogleView();
+          onNotification: (v) {
+            _toogleView(v.mode);
             return true;
           },
           child: body),

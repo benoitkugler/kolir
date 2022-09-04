@@ -5,10 +5,12 @@ import 'package:kolir/logic/utils.dart';
 
 typedef Creneaux = Map<Matiere, VueMatiere>;
 
+final colorWarning = Colors.deepOrange.shade200;
+
 class VueGroupeW extends StatefulWidget {
   final int premiereSemaine;
   final Map<GroupeID, VueGroupe> groupes;
-  final Collisions collisions;
+  final Map<GroupeID, Diagnostic> diagnostics;
   final Creneaux creneaux;
 
   final void Function() onAddGroupe;
@@ -22,7 +24,7 @@ class VueGroupeW extends StatefulWidget {
       onAttribueRegulier;
 
   const VueGroupeW(
-      this.premiereSemaine, this.groupes, this.collisions, this.creneaux,
+      this.premiereSemaine, this.groupes, this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
       required this.onAttributeCreneau,
@@ -69,7 +71,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.collisions.isNotEmpty) _CollisionsW(widget.collisions),
+              if (widget.diagnostics.isNotEmpty)
+                _DiagnosticAlert(widget.diagnostics),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
@@ -78,6 +81,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                       (index) => _GroupeW(
                           entries[index].key,
                           entries[index].value,
+                          widget.diagnostics[entries[index].key],
                           () => widget.onRemoveGroupe(entries[index].key))),
                 ),
               ),
@@ -96,48 +100,20 @@ class _VueGroupeWState extends State<VueGroupeW> {
   }
 }
 
-class _CollisionsW extends StatelessWidget {
-  final Collisions collisions;
+class _DiagnosticAlert extends StatelessWidget {
+  final Map<GroupeID, Diagnostic> diagnostics;
 
-  const _CollisionsW(this.collisions, {super.key});
+  const _DiagnosticAlert(this.diagnostics, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.orange.shade300,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Les groupes suivants sont affectés sur plusieurs matières au même moment.",
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 20),
-            ...collisions.entries
-                .map((e) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          Text(
-                            "${e.key} : ",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Column(
-                              children: e.value.entries
-                                  .map((item) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2.0),
-                                        child: Text(
-                                            "${formatDateHeure(item.key)} (${item.value.map(formatMatiere).join(' et ')})"),
-                                      ))
-                                  .toList())
-                        ],
-                      ),
-                    ))
-                .toList()
-          ],
+      color: colorWarning,
+      child: const Padding(
+        padding: EdgeInsets.all(12.0),
+        child: Text(
+          "Certains groupes requierent une attention.",
+          style: TextStyle(fontSize: 14),
         ),
       ),
     );
@@ -147,9 +123,11 @@ class _CollisionsW extends StatelessWidget {
 class _GroupeW extends StatelessWidget {
   final GroupeID groupe;
   final VueGroupe semaines;
+  final Diagnostic? diagnostic;
 
   final void Function() onRemove;
-  const _GroupeW(this.groupe, this.semaines, this.onRemove, {super.key});
+  const _GroupeW(this.groupe, this.semaines, this.diagnostic, this.onRemove,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -182,10 +160,51 @@ class _GroupeW extends StatelessWidget {
                                     colles.map((c) => ColleW(c)).toList()))
                         .toList()),
               ),
+              if (diagnostic != null) _DiagnosticW(diagnostic!)
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DiagnosticW extends StatelessWidget {
+  final Diagnostic diagnostic;
+  const _DiagnosticW(this.diagnostic, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: colorWarning,
+      child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (diagnostic.collisions.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: Text("Créneaux simultanés :"),
+              ),
+            ...diagnostic.collisions.entries
+                .map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Text(
+                          "S${item.key.semaine} ${item.key.formatDateHeure()} (${item.value.map((m) => formatMatiere(m, dense: true)).join(' et ')})"),
+                    ))
+                .toList(),
+            if (diagnostic.semainesChargees.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Text("Semaines en surchages :"),
+              ),
+            ...diagnostic.semainesChargees
+                .map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Text("Semaine $item"),
+                    ))
+                .toList(),
+          ])),
     );
   }
 }

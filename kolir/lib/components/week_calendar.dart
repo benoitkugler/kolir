@@ -81,6 +81,7 @@ class _WeekCalendarState extends State<WeekCalendar> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(

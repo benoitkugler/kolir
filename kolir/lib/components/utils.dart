@@ -33,7 +33,10 @@ extension Title on ModeView {
   }
 }
 
-class ViewNotification extends Notification {}
+class ViewNotification extends Notification {
+  final ModeView mode;
+  const ViewNotification(this.mode);
+}
 
 class VueSkeleton extends StatelessWidget {
   final ModeView mode;
@@ -58,18 +61,26 @@ class VueSkeleton extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Tooltip(
-                  message: "Passer à la vue suivante",
-                  child: ElevatedButton.icon(
-                      onPressed: () => ViewNotification().dispatch(context),
-                      icon: const Icon(
-                        IconData(0xf028c,
-                            fontFamily: 'MaterialIcons',
-                            matchTextDirection: true),
-                        size: 42,
-                      ),
-                      label: Text(mode.title)),
-                ),
+                ToggleButtons(
+                    borderRadius: const BorderRadius.all(Radius.circular(6)),
+                    isSelected: ModeView.values.map((e) => e == mode).toList(),
+                    onPressed: (index) =>
+                        ViewNotification(ModeView.values[index])
+                            .dispatch(context),
+                    children: [
+                      _ViewChip(
+                          const IconData(0xe559, fontFamily: 'MaterialIcons'),
+                          ModeView.matieres.title,
+                          "Visualiser le colloscope par matières"),
+                      _ViewChip(
+                          const IconData(0xe2eb, fontFamily: 'MaterialIcons'),
+                          ModeView.groupes.title,
+                          "Visualiser le colloscope par groupes"),
+                      _ViewChip(
+                          const IconData(0xf06bb, fontFamily: 'MaterialIcons'),
+                          ModeView.semaines.title,
+                          "Afficher une vue d'ensemble, par semaines"),
+                    ]),
                 const Spacer(),
                 ...actions
               ],
@@ -77,6 +88,34 @@ class VueSkeleton extends StatelessWidget {
           ),
           child
         ],
+      ),
+    );
+  }
+}
+
+class _ViewChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String tooltip;
+
+  const _ViewChip(this.icon, this.label, this.tooltip, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 42,
+            ),
+            const SizedBox(width: 10),
+            Text(label)
+          ],
+        ),
       ),
     );
   }

@@ -15,8 +15,12 @@ String formatWeekday(int weekday) {
   return _days[weekday];
 }
 
+String _formatHeure(int hour, int minute) {
+  return "${hour}h${minute.toString().padLeft(2, "0")}";
+}
+
 String formatHeure(DateTime dt) {
-  return "${dt.hour}h${dt.minute.toString().padLeft(2, "0")}";
+  return _formatHeure(dt.hour, dt.minute);
 }
 
 String formatDateHeure(DateTime dt, {dense = false}) {
@@ -69,4 +73,33 @@ DateTime emptyDate() {
 
 bool isEmptyDate(DateTime dt) {
   return dt.millisecondsSinceEpoch == 0;
+}
+
+class DateHeure {
+  /// comme affichée à l'écran
+  final int semaine;
+  final int weekday;
+  final int heure;
+  final int minute;
+  const DateHeure(this.semaine, this.weekday, this.heure, this.minute);
+
+  @override
+  bool operator ==(Object other) =>
+      other is DateHeure &&
+      other.runtimeType == runtimeType &&
+      other.semaine == semaine &&
+      other.weekday == weekday &&
+      other.heure == heure &&
+      other.minute == minute;
+
+  @override
+  int get hashCode =>
+      semaine.hashCode + weekday.hashCode + heure.hashCode + minute.hashCode;
+
+  String formatDateHeure({dense = false}) {
+    if (dense) {
+      return "${formatWeekday(weekday)} ${_formatHeure(heure, minute)}";
+    }
+    return "${formatWeekday(weekday)} à ${_formatHeure(heure, minute)}";
+  }
 }
