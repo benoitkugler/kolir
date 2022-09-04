@@ -5,24 +5,24 @@ import 'package:kolir/logic/utils.dart';
 
 typedef Creneaux = Map<Matiere, VueMatiere>;
 
-class VueGroupeW extends StatelessWidget {
+class VueGroupeW extends StatefulWidget {
   final int premiereSemaine;
   final Map<GroupeID, VueGroupe> groupes;
-
+  final Collisions collisions;
   final Creneaux creneaux;
 
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
 
-  final Creneaux Function(
-          Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
+  final void Function(Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
       onAttributeCreneau;
-  final Creneaux Function(Matiere mat, int semaine) onClearCreneaux;
-  final Creneaux Function(
+  final void Function(Matiere mat, int semaine) onClearCreneaux;
+  final void Function(
           Matiere mat, GroupeID premierGroupe, DateTime premierCreneau)
       onAttribueRegulier;
 
-  const VueGroupeW(this.premiereSemaine, this.groupes, this.creneaux,
+  const VueGroupeW(
+      this.premiereSemaine, this.groupes, this.collisions, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
       required this.onAttributeCreneau,
@@ -30,43 +30,114 @@ class VueGroupeW extends StatelessWidget {
       required this.onAttribueRegulier,
       super.key});
 
-  void showEditPassages(BuildContext context) {
-    showDialog(
-        context: context,
-        builder: (context) => _GroupesCreneaux(
-            premiereSemaine,
-            groupes.keys.toList(),
-            creneaux,
-            onAttributeCreneau,
-            onClearCreneaux,
-            onAttribueRegulier));
-  }
+  @override
+  State<VueGroupeW> createState() => _VueGroupeWState();
+}
+
+class _VueGroupeWState extends State<VueGroupeW> {
+  bool isInEdit = false;
 
   @override
   Widget build(BuildContext context) {
-    final entries = groupes.entries.toList();
+    final entries = widget.groupes.entries.toList();
+    final actions = [
+      ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          onPressed: isInEdit ? null : widget.onAddGroupe,
+          icon: const Icon(IconData(0xe047, fontFamily: 'MaterialIcons')),
+          label: const Text("Ajouter un groupe")),
+      const SizedBox(width: 10),
+      Tooltip(
+        message: isInEdit
+            ? "Quitter le mode Edition"
+            : "Modifier les passages des groupes",
+        child: ElevatedButton(
+            onPressed: () => setState(() {
+                  isInEdit = !isInEdit;
+                }),
+            child: Text(isInEdit ? "Terminer" : "Editer...")),
+      )
+    ];
     return VueSkeleton(
       mode: ModeView.groupes,
-      actions: [
-        ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: onAddGroupe,
-            icon: const Icon(IconData(0xe047, fontFamily: 'MaterialIcons')),
-            label: const Text("Ajouter un groupe")),
-        const SizedBox(width: 10),
-        Tooltip(
-          message: "Changer l'attribution des groupes",
-          child: ElevatedButton(
-              onPressed: () => showEditPassages(context),
-              child: const Text("Modifier les passages")),
-        )
-      ],
-      child: Expanded(
-        child: ListView(
-          children: List<Widget>.generate(
-              groupes.keys.length,
-              (index) => _GroupeW(entries[index].key, entries[index].value,
-                  () => onRemoveGroupe(entries[index].key))),
+      actions: actions,
+      child: Flexible(
+        child: AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          crossFadeState:
+              isInEdit ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.collisions.isNotEmpty) _CollisionsW(widget.collisions),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: List<Widget>.generate(
+                      widget.groupes.keys.length,
+                      (index) => _GroupeW(
+                          entries[index].key,
+                          entries[index].value,
+                          () => widget.onRemoveGroupe(entries[index].key))),
+                ),
+              ),
+            ],
+          ),
+          secondChild: _GroupesCreneaux(
+              widget.premiereSemaine,
+              widget.groupes.keys.toList(),
+              widget.creneaux,
+              widget.onAttributeCreneau,
+              widget.onClearCreneaux,
+              widget.onAttribueRegulier),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollisionsW extends StatelessWidget {
+  final Collisions collisions;
+
+  const _CollisionsW(this.collisions, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.orange.shade300,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Les groupes suivants sont affectés sur plusieurs matières au même moment.",
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            ...collisions.entries
+                .map((e) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            "${e.key} : ",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Column(
+                              children: e.value.entries
+                                  .map((item) => Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2.0),
+                                        child: Text(
+                                            "${formatDateHeure(item.key)} (${item.value.map(formatMatiere).join(' et ')})"),
+                                      ))
+                                  .toList())
+                        ],
+                      ),
+                    ))
+                .toList()
+          ],
         ),
       ),
     );
@@ -126,11 +197,10 @@ class _GroupesCreneaux extends StatefulWidget {
   final List<GroupeID> groupes;
   final Map<Matiere, VueMatiere> creneaux;
 
-  final Creneaux Function(
-          Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
+  final void Function(Matiere mat, PopulatedCreneau src, PopulatedCreneau dst)
       onAttributeCreneau;
-  final Creneaux Function(Matiere mat, int semaine) onClearCreneaux;
-  final Creneaux Function(
+  final void Function(Matiere mat, int semaine) onClearCreneaux;
+  final void Function(
           Matiere mat, GroupeID premierGroupe, DateTime premierCreneau)
       onAttribueRegulier;
 
@@ -144,19 +214,6 @@ class _GroupesCreneaux extends StatefulWidget {
 
 class _GroupesCreneauxState extends State<_GroupesCreneaux> {
   Matiere? matiere;
-  Creneaux _updatedCreneaux = {};
-
-  @override
-  void initState() {
-    _updatedCreneaux = widget.creneaux;
-    super.initState();
-  }
-
-  @override
-  void didUpdateWidget(covariant _GroupesCreneaux oldWidget) {
-    _updatedCreneaux = widget.creneaux;
-    super.didUpdateWidget(oldWidget);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,51 +224,42 @@ class _GroupesCreneauxState extends State<_GroupesCreneaux> {
         widget.premiereSemaine,
         matiere!,
         widget.groupes,
-        _updatedCreneaux[matiere!] ?? [],
-        (origin, dst) => setState(() {
-          _updatedCreneaux = widget.onAttributeCreneau(matiere!, origin, dst);
-        }),
-        (semaine) => setState(() {
-          _updatedCreneaux = widget.onClearCreneaux(matiere!, semaine);
-        }),
-        (premierGroupe, premierCreneau) => setState(() {
-          _updatedCreneaux = widget.onAttribueRegulier(
-              matiere!, premierGroupe, premierCreneau);
-        }),
+        widget.creneaux[matiere!] ?? [],
+        (origin, dst) => widget.onAttributeCreneau(matiere!, origin, dst),
+        (semaine) => widget.onClearCreneaux(matiere!, semaine),
+        (premierGroupe, premierCreneau) =>
+            widget.onAttribueRegulier(matiere!, premierGroupe, premierCreneau),
       );
     }
-    return Dialog(
-      child: Card(
-        child: Column(
-          children: [
-            DropdownButton(
-                borderRadius: const BorderRadius.all(Radius.circular(4)),
-                hint: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text("Choisir la matière..."),
-                ),
-                items: Matiere.values
-                    .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(formatMatiere(e)),
-                          ),
-                        ))
-                    .toList(),
-                value: matiere,
-                onChanged: (mat) {
-                  if (mat == null) {
-                    return;
-                  }
-                  setState(() {
-                    matiere = mat;
-                  });
-                }),
-            Expanded(child: body),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        DropdownButton(
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
+            hint: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("Choisir la matière..."),
+            ),
+            items: Matiere.values
+                .map((e) => DropdownMenuItem(
+                      value: e,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(formatMatiere(e)),
+                      ),
+                    ))
+                .toList(),
+            value: matiere,
+            onChanged: (mat) {
+              if (mat == null) {
+                return;
+              }
+              setState(() {
+                matiere = mat;
+              });
+            }),
+        const SizedBox(height: 10),
+        body,
+      ],
     );
   }
 }
@@ -255,13 +303,15 @@ class _MatiereCreneauxState extends State<_MatiereCreneaux> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (inWizard)
-          const Text(
-            """
-            Cet assistant vous permet d'attribuer rapidement des créneaux de façon régulière.
-            Les créneaux seront attribués séquentiellement en commençant par placer le premier groupe choisi
-            sur le premier créneau choisi.
-            Attention, les créneaux déjà attribués seront ignorés.
-            """,
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              """
+              Cet assistant vous permet d'attribuer rapidement des créneaux de façon régulière.
+              Les créneaux seront attribués séquentiellement en commençant par placer le premier groupe choisi sur le premier créneau choisi.
+              Attention, les créneaux déjà attribués seront ignorés.
+              """,
+            ),
           ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,

@@ -147,6 +147,7 @@ class _HomeState extends State<_Home> {
         return VueGroupeW(
           col.premiereSemaine,
           col.parGroupe(),
+          col.checkDoublePresence(),
           col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
@@ -213,10 +214,14 @@ class _HomeState extends State<_Home> {
                   child: Card(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          "Editer les notes",
-                          style: TextStyle(fontSize: 20),
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            "Editer les notes",
+                            style: TextStyle(fontSize: 20),
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(20.0),
@@ -224,15 +229,18 @@ class _HomeState extends State<_Home> {
                               controller: notesController,
                               decoration: const InputDecoration(
                                   label: Text("Notes libres")),
-                              maxLines: 20),
+                              maxLines: 10),
                         ),
                         Row(
                           children: [
                             const Spacer(),
-                            ElevatedButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text("Enregistrer"))
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text("Enregistrer")),
+                            )
                           ],
                         )
                       ],

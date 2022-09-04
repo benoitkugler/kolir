@@ -51,6 +51,7 @@ class VueSkeleton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 6.0, bottom: 4),

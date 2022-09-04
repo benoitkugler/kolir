@@ -10,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 /// les créneaux non prévus mais non attribués à un groupe.
 const NoGroup = "";
 
+typedef Collisions = Map<GroupeID, Map<DateTime, List<Matiere>>>;
+
 /// [Colloscope] est la représentation en mémoire vive
 /// d'un colloscope.
 /// Il peut être enregistré (au format JSON), et affiché
@@ -157,6 +159,31 @@ class Colloscope {
     }
     return Map<Matiere, VueMatiere>.fromEntries(Matiere.values
         .map((e) => MapEntry(e, _semaineMapToList(tmp[e] ?? {}, []))));
+  }
+
+  /// [checkDoublePresence] renvoie une liste de groupes assitant à (au moins) deux créneaux
+  /// en même temps. Un colloscope valide devrait renvoyer une liste vide.
+  Collisions checkDoublePresence() {
+    final Collisions out = {};
+    for (var item in _groupes.entries) {
+      final group = item.key;
+      if (group == NoGroup) {
+        continue;
+      }
+      final parCreneau = <DateTime, List<Matiere>>{};
+      for (var mat in item.value.entries) {
+        for (var date in mat.value) {
+          final l = parCreneau.putIfAbsent(date, () => []);
+          l.add(mat.key);
+        }
+      }
+      final problemes =
+          parCreneau.entries.where((element) => element.value.length > 1);
+      if (problemes.isNotEmpty) {
+        out[group] = Map.fromEntries(problemes);
+      }
+    }
+    return out;
   }
 
   void reset() {
