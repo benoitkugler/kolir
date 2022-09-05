@@ -122,28 +122,24 @@ class _ViewChip extends StatelessWidget {
 }
 
 class SemaineList extends StatelessWidget {
-  final int premiereSemaine;
-  final List<Widget> semaines;
+  final List<SemaineTo<Widget>> semaines;
 
-  const SemaineList(this.premiereSemaine, this.semaines, {super.key});
+  const SemaineList(this.semaines, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: List<Widget>.generate(
-          semaines.length, (s) => _SemaineRow(premiereSemaine, s, semaines[s])),
+      children: semaines.map((s) => _SemaineRow(s.semaine, s.item)).toList(),
     );
   }
 }
 
 class _SemaineRow extends StatelessWidget {
-  final int premiereSemaine;
-  final int semaineIndex;
+  final int semaine;
   final Widget body;
-  const _SemaineRow(this.premiereSemaine, this.semaineIndex, this.body,
-      {super.key});
+  const _SemaineRow(this.semaine, this.body, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +147,7 @@ class _SemaineRow extends StatelessWidget {
       padding: const EdgeInsets.all(4.0),
       child: Row(
         children: [
-          Text(
-              "Semaine ${(premiereSemaine + semaineIndex).toString().padLeft(2, '  ')} :"),
+          Text("Semaine ${semaine.toString().padLeft(2, '  ')} :"),
           Expanded(child: body)
         ],
       ),
@@ -169,7 +164,7 @@ class ColleW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = formatDateHeure(colle.date);
+    final time = colle.date.formatDateHeure();
     final text = showMatiere
         ? "${formatMatiere(colle.matiere, dense: true)} $time"
         : time;

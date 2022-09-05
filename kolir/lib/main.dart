@@ -8,6 +8,7 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/utils.dart';
 
 void main() async {
   runApp(const _App());
@@ -82,14 +83,14 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void addCreneaux(Matiere mat, List<DateTime> hours, List<int> semaines) {
+  void addCreneaux(Matiere mat, List<DateHeure> hours, List<int> semaines) {
     setState(() {
       col.addCreneaux(mat, hours, semaines);
       isDirty = true;
     });
   }
 
-  void removeCreneau(Matiere mat, DateTime creneau) {
+  void removeCreneau(Matiere mat, DateHeure creneau) {
     setState(() {
       col.removeCreneau(mat, creneau);
       isDirty = true;
@@ -99,7 +100,8 @@ class _HomeState extends State<_Home> {
   Creneaux attributeCreneau(
       Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
     setState(() {
-      col.attributeCreneau(mat, src, dst);
+      // TODO:
+      // col.attributeCreneau(mat, src, dst);
       isDirty = true;
     });
     return col.parMatiere();
@@ -107,14 +109,15 @@ class _HomeState extends State<_Home> {
 
   Creneaux clearCreneaux(Matiere mat, int semaine) {
     setState(() {
-      col.clearCreneaux(mat, semaine);
+      // TODO:
+      // col.clearCreneaux(mat, semaine);
       isDirty = true;
     });
     return col.parMatiere();
   }
 
   Creneaux attribueRegulier(
-      Matiere mat, GroupeID premierGroupe, DateTime premierCreneau) {
+      Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau) {
     setState(() {
       col.attribueRegulier(mat, premierGroupe, premierCreneau);
       isDirty = true;
@@ -145,7 +148,6 @@ class _HomeState extends State<_Home> {
         return VueSemaineW(col.nbCreneauxVaccants(), col.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
-          col.premiereSemaine,
           col.parGroupe(),
           col.diagnostics(),
           col.parMatiere(),

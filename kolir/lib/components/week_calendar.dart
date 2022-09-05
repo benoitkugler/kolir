@@ -1,9 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/utils.dart';
 
 class WeekCalendar extends StatefulWidget {
-  final void Function(List<DateTime> creneaux, List<int> semaines) onAdd;
+  final void Function(List<DateHeure> creneaux, List<int> semaines) onAdd;
   const WeekCalendar(this.onAdd, {super.key});
 
   @override
@@ -11,7 +12,7 @@ class WeekCalendar extends StatefulWidget {
 }
 
 class _WeekCalendarState extends State<WeekCalendar> {
-  List<DateTime> creneaux = [];
+  List<DateHeure> creneaux = [];
   TextEditingController semainesController = TextEditingController();
 
   @override
@@ -20,19 +21,19 @@ class _WeekCalendarState extends State<WeekCalendar> {
     super.initState();
   }
 
-  void removeCreneau(DateTime creneau) {
+  void removeCreneau(DateHeure creneau) {
     setState(() {
       creneaux.remove(creneau);
     });
   }
 
-  void addCreneau(DateTime creneau) {
+  void addCreneau(DateHeure creneau) {
     setState(() {
       creneaux.add(creneau);
     });
   }
 
-  void moveCreneau(DateTime dst, DateTime src) {
+  void moveCreneau(DateHeure dst, DateHeure src) {
     setState(() {
       creneaux.remove(src);
       creneaux.add(dst);
@@ -90,11 +91,13 @@ class _WeekCalendarState extends State<WeekCalendar> {
                       width: 200,
                       child: TextField(
                         controller: semainesController,
-                        decoration:
-                            const InputDecoration(label: Text("Semaines")),
+                        decoration: const InputDecoration(
+                            label: Text("Semaines"),
+                            helperText: "Semaines séparées par une virgule"),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 50),
                   ElevatedButton(
                       onPressed: semaines.isEmpty || creneaux.isEmpty
                           ? null
@@ -117,27 +120,55 @@ const _dayWidth = 100.0;
 const _oneHourRatio = 1 / (_lastHour - _firstHour);
 const _oneHourHeight = _totalHeight * _oneHourRatio;
 
-final dimanche = DateTime(2022, 9, 4);
-
-class _Day extends StatelessWidget {
+class _Day extends StatefulWidget {
   final int weekday;
-  final List<DateTime> creneaux;
-  final void Function(DateTime) onRemove;
-  final void Function(DateTime) onAdd;
-  final void Function(DateTime dst, DateTime src) onMove;
+  final List<DateHeure> creneaux;
+  final void Function(DateHeure) onRemove;
+  final void Function(DateHeure) onAdd;
+  final void Function(DateHeure dst, DateHeure src) onMove;
 
   const _Day(
       this.weekday, this.creneaux, this.onRemove, this.onAdd, this.onMove,
       {super.key});
 
-  DateTime _fromOffset(Offset local) {
-    // compute the corresponding hour
-    final minutes = (60 * local.dy / _oneHourHeight).round();
+  @override
+  State<_Day> createState() => _DayState();
+}
 
-    return dimanche.add(Duration(
-        days: weekday,
-        hours: _firstHour,
-        minutes: minutes - minutes % 30)); // lundi = 1
+class _DayState extends State<_Day> {
+  double? hoverTop;
+
+  // round to half hour, height is the position of the mouse
+  double _clip(double height) {
+    // express distance in half hour
+    final halfHourDistance = height / (_oneHourHeight / 2);
+    final inHours = halfHourDistance.round() * 0.5 -
+        0.5; // -0.5 to be in the center of the hour
+    return inHours * _oneHourHeight;
+  }
+
+  DateHeure fromHeight(double height) {
+    final minutes = (60 * height / _oneHourHeight).round();
+    final tmp = Duration(hours: _firstHour, minutes: minutes);
+    return DateHeure(0 /*ignored*/, widget.weekday, tmp.inHours,
+        tmp.inMinutes - 60 * tmp.inHours);
+  }
+
+  DateHeure _fromOffset(Offset local) {
+    final height = _clip(local.dy);
+    // compute the corresponding hour
+    return fromHeight(height);
+  }
+
+  void _onHover(PointerHoverEvent event) {
+    final newHoverTop = _clip(event.localPosition.dy);
+    if (newHoverTop != hoverTop) {
+      setState(() {
+        hoverTop = widget.creneaux.contains(fromHeight(newHoverTop))
+            ? null
+            : newHoverTop;
+      });
+    }
   }
 
   @override
@@ -147,25 +178,32 @@ class _Day extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(formatWeekday(weekday)),
-          GestureDetector(
-            onTapUp: (details) {
-              final time = _fromOffset(details.localPosition);
-              onAdd(time);
-            },
-            child: DragTarget<DateTime>(
-              builder: (context, candidateData, rejectedData) {
-                return Container(
+          Text(formatWeekday(widget.weekday)),
+          MouseRegion(
+            onExit: (event) => setState(() {
+              hoverTop = null;
+            }),
+            onHover: _onHover,
+            child: GestureDetector(
+              onTapUp: (details) {
+                final time = _fromOffset(details.localPosition);
+                widget.onAdd(time);
+              },
+              child: Container(
                   height: _totalHeight,
                   width: _dayWidth,
                   decoration: BoxDecoration(
                       border: Border.all(
-                          color: candidateData.isNotEmpty
-                              ? Colors.blue
-                              : Colors.black),
+                          color: hoverTop != null ? Colors.blue : Colors.black),
                       borderRadius: const BorderRadius.all(Radius.circular(8))),
-                  child: Stack(
-                    children: creneaux.map((e) {
+                  child: Stack(children: [
+                    if (hoverTop != null)
+                      Positioned(
+                          left: 0,
+                          top: hoverTop,
+                          height: _oneHourHeight,
+                          child: _CreneauW(fromHeight(hoverTop!), null)),
+                    ...widget.creneaux.map((e) {
                       final topRatio =
                           (e.hour * 60 + e.minute - _firstHour * 60) *
                               _oneHourRatio /
@@ -174,18 +212,10 @@ class _Day extends StatelessWidget {
                         left: 0,
                         top: topRatio * _totalHeight,
                         height: _oneHourHeight,
-                        child: _CreneauW(e, () => onRemove(e)),
+                        child: _CreneauW(e, () => widget.onRemove(e)),
                       );
                     }).toList(),
-                  ),
-                );
-              },
-              onAcceptWithDetails: (details) {
-                final local = (context.findRenderObject() as RenderBox)
-                    .globalToLocal(details.offset);
-                final dst = _fromOffset(local);
-                onMove(dst, details.data);
-              },
+                  ])),
             ),
           ),
         ],
@@ -195,53 +225,33 @@ class _Day extends StatelessWidget {
 }
 
 class _CreneauW extends StatelessWidget {
-  final DateTime creneau;
-  final void Function() onRemove;
+  final DateHeure creneau;
+  final void Function()? onRemove;
 
   const _CreneauW(this.creneau, this.onRemove, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Draggable(
-      feedback: Card(
-          color: Colors.blue,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(formatHeure(creneau)),
-          )),
-      dragAnchorStrategy: childDragAnchorStrategy,
-      data: creneau,
-      childWhenDragging: Container(
-        width: _dayWidth,
-        decoration: BoxDecoration(
-            color: Colors.lightBlue.withOpacity(0.1),
-            borderRadius: const BorderRadius.all(Radius.circular(6))),
-        child: Row(children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(formatHeure(creneau)),
-          ),
-        ]),
-      ),
-      child: Container(
-        width: _dayWidth,
-        decoration: BoxDecoration(
-            color: Colors.lightBlue.withOpacity(0.5),
-            borderRadius: const BorderRadius.all(Radius.circular(6))),
-        child: Row(children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(formatHeure(creneau)),
-          ),
-          const Spacer(),
-          IconButton(
-            iconSize: 20,
-            onPressed: onRemove,
-            icon: deleteIcon,
-            color: Colors.red,
-          )
-        ]),
-      ),
+    return Container(
+      width: _dayWidth,
+      height: _oneHourHeight,
+      decoration: BoxDecoration(
+          color: Colors.lightBlue.withOpacity(onRemove == null ? 0.2 : 0.5),
+          borderRadius: const BorderRadius.all(Radius.circular(6))),
+      child: Row(children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(creneau.formatHeure()),
+        ),
+        const Spacer(),
+        IconButton(
+          iconSize: 16,
+          splashRadius: 20,
+          onPressed: onRemove,
+          icon: deleteIcon,
+          color: Colors.red,
+        )
+      ]),
     );
   }
 }
@@ -249,19 +259,19 @@ class _CreneauW extends StatelessWidget {
 class _Horaires extends StatelessWidget {
   const _Horaires({super.key});
 
-  static final ticks = [
-    DateTime(2000, 1, 1, 8),
-    DateTime(2000, 1, 1, 9),
-    DateTime(2000, 1, 1, 10),
-    DateTime(2000, 1, 1, 11),
-    DateTime(2000, 1, 1, 12),
-    DateTime(2000, 1, 1, 13),
-    DateTime(2000, 1, 1, 14),
-    DateTime(2000, 1, 1, 15),
-    DateTime(2000, 1, 1, 16),
-    DateTime(2000, 1, 1, 17),
-    DateTime(2000, 1, 1, 18),
-    DateTime(2000, 1, 1, 19),
+  static const ticks = [
+    DateHeure(2000, 1, 8, 0),
+    DateHeure(2000, 1, 9, 0),
+    DateHeure(2000, 1, 10, 0),
+    DateHeure(2000, 1, 11, 0),
+    DateHeure(2000, 1, 12, 0),
+    DateHeure(2000, 1, 13, 0),
+    DateHeure(2000, 1, 14, 0),
+    DateHeure(2000, 1, 15, 0),
+    DateHeure(2000, 1, 16, 0),
+    DateHeure(2000, 1, 17, 0),
+    DateHeure(2000, 1, 18, 0),
+    DateHeure(2000, 1, 19, 0),
   ];
 
   @override

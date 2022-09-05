@@ -11,12 +11,12 @@ String groupesToHTML(Colloscope col) {
   for (var item in groupes.entries) {
     final groupeID = item.key;
 
-    final rows = List<String>.generate(item.value.length, (semaine) {
-      final creneaux = item.value[semaine].map((e) =>
-          "<div class='chip'>${formatMatiere(e.matiere, dense: true)} ${formatDateHeure(e.date)}</div>");
+    final rows = item.value.map((semaine) {
+      final creneaux = semaine.item.map((e) =>
+          "<div class='chip'>${formatMatiere(e.matiere, dense: true)} ${e.date.formatDateHeure()}</div>");
       return """
       <tr>
-        <td>Semaine ${col.premiereSemaine + semaine}</td>
+        <td>Semaine ${semaine.semaine}</td>
         <td>${creneaux.join("")}</td>
       </tr>
       """;

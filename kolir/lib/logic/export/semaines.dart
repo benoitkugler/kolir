@@ -10,19 +10,17 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
   final semaines = col.parSemaine();
 
   List<String> rows = [];
-  for (var semaineIndex = 0; semaineIndex < semaines.length; semaineIndex++) {
-    final semaine = semaines[semaineIndex];
-
+  for (var semaine in semaines) {
     final matieres = Matiere.values.map((mat) {
-      final colles = semaine[mat] ?? [];
+      final colles = semaine.item[mat] ?? [];
       final creneaux = colles.map((e) =>
-          "<div class='chip matiere-${mat.index}'><i>${e.groupeID}</i> ${formatDateHeure(e.date, dense: true)}</div>");
+          "<div class='chip matiere-${mat.index}'><i>${e.groupeID}</i> ${e.date.formatDateHeure(dense: true)}</div>");
       return "<td>${creneaux.join('')}</td>";
     });
 
     final row = """
       <tr>
-        <td>S ${col.premiereSemaine + semaineIndex}</td>
+        <td>S ${semaine.semaine}</td>
         ${matieres.join("\n")}
       </tr>
       """;

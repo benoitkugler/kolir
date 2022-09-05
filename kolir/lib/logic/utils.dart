@@ -19,17 +19,6 @@ String _formatHeure(int hour, int minute) {
   return "${hour}h${minute.toString().padLeft(2, "0")}";
 }
 
-String formatHeure(DateTime dt) {
-  return _formatHeure(dt.hour, dt.minute);
-}
-
-String formatDateHeure(DateTime dt, {dense = false}) {
-  if (dense) {
-    return "${formatWeekday(dt.weekday)} ${formatHeure(dt)}";
-  }
-  return "${formatWeekday(dt.weekday)} à ${formatHeure(dt)}";
-}
-
 String formatMatiere(Matiere mat, {dense = false}) {
   switch (mat) {
     case Matiere.maths:
@@ -67,21 +56,23 @@ String formatMatiere(Matiere mat, {dense = false}) {
   }
 }
 
-DateTime emptyDate() {
-  return DateTime.fromMillisecondsSinceEpoch(0);
+DateHeure emptyDate() {
+  return const DateHeure(-1, 0, 0, 0);
 }
 
-bool isEmptyDate(DateTime dt) {
-  return dt.millisecondsSinceEpoch == 0;
+bool isEmptyDate(DateHeure dt) {
+  return dt == const DateHeure(-1, 0, 0, 0);
 }
 
-class DateHeure {
+/// DateHeure est une version simplifiée de DateTime,
+/// qui se réfère aux semaines du colloscope.
+class DateHeure implements Comparable<DateHeure> {
   /// comme affichée à l'écran
   final int semaine;
   final int weekday;
-  final int heure;
+  final int hour;
   final int minute;
-  const DateHeure(this.semaine, this.weekday, this.heure, this.minute);
+  const DateHeure(this.semaine, this.weekday, this.hour, this.minute);
 
   @override
   bool operator ==(Object other) =>
@@ -89,17 +80,54 @@ class DateHeure {
       other.runtimeType == runtimeType &&
       other.semaine == semaine &&
       other.weekday == weekday &&
-      other.heure == heure &&
+      other.hour == hour &&
       other.minute == minute;
 
   @override
   int get hashCode =>
-      semaine.hashCode + weekday.hashCode + heure.hashCode + minute.hashCode;
+      semaine.hashCode + weekday.hashCode + hour.hashCode + minute.hashCode;
 
+  @override
+  int compareTo(DateHeure other) {
+    final diffSemaine = semaine - other.semaine;
+    if (diffSemaine != 0) {
+      return diffSemaine;
+    }
+    final diffDay = weekday - other.weekday;
+    if (diffDay != 0) {
+      return diffDay;
+    }
+    final diffHour = hour - other.hour;
+    if (diffHour != 0) {
+      return diffHour;
+    }
+    return minute - other.minute;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "semaine": semaine,
+      "weekday": weekday,
+      "hour": hour,
+      "minute": minute,
+    };
+  }
+
+  factory DateHeure.fromJson(Map<String, dynamic> json) {
+    return DateHeure(
+        json["semaine"], json["weekday"], json["hour"], json["minute"]);
+  }
+
+  /// ignore week and day
+  String formatHeure() {
+    return _formatHeure(hour, minute);
+  }
+
+  /// ignore week
   String formatDateHeure({dense = false}) {
     if (dense) {
-      return "${formatWeekday(weekday)} ${_formatHeure(heure, minute)}";
+      return "${formatWeekday(weekday)} ${_formatHeure(hour, minute)}";
     }
-    return "${formatWeekday(weekday)} à ${_formatHeure(heure, minute)}";
+    return "${formatWeekday(weekday)} à ${_formatHeure(hour, minute)}";
   }
 }

@@ -5,7 +5,7 @@ import 'package:kolir/logic/utils.dart';
 
 class VueSemaineW extends StatelessWidget {
   final int creneauxVaccants;
-  final List<VueSemaine> semaines;
+  final List<SemaineTo<VueSemaine>> semaines;
 
   const VueSemaineW(this.creneauxVaccants, this.semaines, {super.key});
 
@@ -30,8 +30,9 @@ class VueSemaineW extends StatelessWidget {
         child: Expanded(
           child: SingleChildScrollView(
             child: SemaineList(
-              1,
-              semaines.map((e) => _SemaineBody(e)).toList(),
+              semaines
+                  .map((e) => SemaineTo(e.semaine, _SemaineBody(e.item)))
+                  .toList(),
             ),
           ),
         ));
@@ -78,7 +79,7 @@ class _Group extends StatelessWidget {
           decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(8)),
               color: matiere.color),
-          child: Text("${formatDateHeure(creneau.date)} $group"),
+          child: Text("${creneau.date.formatDateHeure()} $group"),
         ),
       ),
     );

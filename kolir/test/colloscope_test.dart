@@ -6,10 +6,19 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
-final l1 = [DateTime(2022, 9, 6), DateTime(2022, 9, 13), DateTime(2022, 9, 20)];
-final l2 = [DateTime(2022, 9, 7), DateTime(2022, 9, 14), DateTime(2022, 9, 21)];
+const l1 = [
+  DateHeure(1, 3, 6, 0),
+  DateHeure(1, 3, 13, 0),
+  DateHeure(1, 3, 20, 0)
+];
+const l2 = [
+  DateHeure(1, 3, 7, 0),
+  DateHeure(1, 3, 14, 0),
+  DateHeure(2, 3, 21, 0)
+];
 
 final sample = Colloscope({
   "G1": {
@@ -34,7 +43,7 @@ final sample = Colloscope({
     Matiere.maths: l1,
     Matiere.allemand: l1,
   }
-}, DateTime(2022, 9, 5));
+});
 
 void main() {
   test("Colloscope JSON", () {
@@ -42,8 +51,7 @@ void main() {
     final json = jsonEncode(cl.toJson());
     final cl2 = Colloscope.fromJson(jsonDecode(json));
     expect(cl.parGroupe().length, equals(cl2.parGroupe().length));
-    expect(cl.debut, equals(cl2.debut));
-    expect(cl.premiereSemaine, equals(cl2.premiereSemaine));
+    expect(cl.notes, equals(cl2.notes));
   });
 
   test("Par semaine", () {
