@@ -177,7 +177,7 @@ class _HomeState extends State<_Home> {
           onAttribueCreneaux: attribueCreneaux,
         );
       case ModeView.matieres:
-        return VueMatiereW(
+        return VueMatiereW(currentColloscope.creneauxHoraires,
             currentColloscope.parMatiere(), addCreneaux, removeCreneau);
     }
   }

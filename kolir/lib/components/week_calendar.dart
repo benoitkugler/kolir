@@ -1,11 +1,16 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
+import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
 class WeekCalendar extends StatefulWidget {
+  final CreneauHoraireProvider creneauxHoraires;
+
   final void Function(List<DateHeure> creneaux, List<int> semaines) onAdd;
-  const WeekCalendar(this.onAdd, {super.key});
+
+  const WeekCalendar(this.creneauxHoraires, this.onAdd, {super.key});
 
   @override
   State<WeekCalendar> createState() => _WeekCalendarState();
@@ -63,19 +68,49 @@ class _WeekCalendarState extends State<WeekCalendar> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const _Horaires(),
-                  _Day(1, creneaux.where((dt) => dt.weekday == 1).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
-                  _Day(2, creneaux.where((dt) => dt.weekday == 2).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
-                  _Day(3, creneaux.where((dt) => dt.weekday == 3).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
-                  _Day(4, creneaux.where((dt) => dt.weekday == 4).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
-                  _Day(5, creneaux.where((dt) => dt.weekday == 5).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
-                  _Day(6, creneaux.where((dt) => dt.weekday == 6).toList(),
-                      removeCreneau, addCreneau, moveCreneau),
+                  _Horaires(widget.creneauxHoraires),
+                  _Day(
+                      widget.creneauxHoraires,
+                      1,
+                      creneaux.where((dt) => dt.weekday == 1).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
+                  _Day(
+                      widget.creneauxHoraires,
+                      2,
+                      creneaux.where((dt) => dt.weekday == 2).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
+                  _Day(
+                      widget.creneauxHoraires,
+                      3,
+                      creneaux.where((dt) => dt.weekday == 3).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
+                  _Day(
+                      widget.creneauxHoraires,
+                      4,
+                      creneaux.where((dt) => dt.weekday == 4).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
+                  _Day(
+                      widget.creneauxHoraires,
+                      5,
+                      creneaux.where((dt) => dt.weekday == 5).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
+                  _Day(
+                      widget.creneauxHoraires,
+                      6,
+                      creneaux.where((dt) => dt.weekday == 6).toList(),
+                      removeCreneau,
+                      addCreneau,
+                      moveCreneau),
                 ],
               ),
             ),
@@ -113,22 +148,20 @@ class _WeekCalendarState extends State<WeekCalendar> {
   }
 }
 
-const _firstHour = 8;
-const _lastHour = 19;
 const _totalHeight = 400.0;
 const _dayWidth = 100.0;
-const _oneHourRatio = 1 / (_lastHour - _firstHour);
-const _oneHourHeight = _totalHeight * _oneHourRatio;
 
 class _Day extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
+
   final int weekday;
   final List<DateHeure> creneaux;
   final void Function(DateHeure) onRemove;
   final void Function(DateHeure) onAdd;
   final void Function(DateHeure dst, DateHeure src) onMove;
 
-  const _Day(
-      this.weekday, this.creneaux, this.onRemove, this.onAdd, this.onMove,
+  const _Day(this.horaires, this.weekday, this.creneaux, this.onRemove,
+      this.onAdd, this.onMove,
       {super.key});
 
   @override
@@ -136,15 +169,23 @@ class _Day extends StatefulWidget {
 }
 
 class _DayState extends State<_Day> {
+  int get _firstHour => widget.horaires.firstHour;
+  double get _oneHourRatio => widget.horaires.oneHourRatio;
+  double get _oneHourHeight => _totalHeight * _oneHourRatio;
+
   double? hoverTop;
 
-  // round to half hour, height is the position of the mouse
+  // round to the closest creneau
   double _clip(double height) {
-    // express distance in half hour
-    final halfHourDistance = height / (_oneHourHeight / 2);
-    final inHours = halfHourDistance.round() * 0.5 -
-        0.5; // -0.5 to be in the center of the hour
-    return inHours * _oneHourHeight;
+    final hourDistance = height / _oneHourHeight;
+    final inMinutes = ((_firstHour + hourDistance) * 60).round();
+    final bestHoraire = minBy(
+        widget.horaires.values,
+        (e) => (e.hour * 60 + e.minute + e.lengthInMinutes / 2 - inMinutes)
+            .abs())!;
+    final centerInHour =
+        (bestHoraire.hour - _firstHour) + bestHoraire.minute / 60;
+    return centerInHour * _oneHourHeight;
   }
 
   DateHeure fromHeight(double height) {
@@ -202,7 +243,8 @@ class _DayState extends State<_Day> {
                           left: 0,
                           top: hoverTop,
                           height: _oneHourHeight,
-                          child: _CreneauW(fromHeight(hoverTop!), null)),
+                          child: _CreneauW(
+                              _oneHourHeight, fromHeight(hoverTop!), null)),
                     ...widget.creneaux.map((e) {
                       final topRatio =
                           (e.hour * 60 + e.minute - _firstHour * 60) *
@@ -212,7 +254,8 @@ class _DayState extends State<_Day> {
                         left: 0,
                         top: topRatio * _totalHeight,
                         height: _oneHourHeight,
-                        child: _CreneauW(e, () => widget.onRemove(e)),
+                        child: _CreneauW(
+                            _oneHourHeight, e, () => widget.onRemove(e)),
                       );
                     }).toList(),
                   ])),
@@ -225,16 +268,17 @@ class _DayState extends State<_Day> {
 }
 
 class _CreneauW extends StatelessWidget {
+  final double height;
   final DateHeure creneau;
   final void Function()? onRemove;
 
-  const _CreneauW(this.creneau, this.onRemove, {super.key});
+  const _CreneauW(this.height, this.creneau, this.onRemove, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: _dayWidth,
-      height: _oneHourHeight,
+      height: height,
       decoration: BoxDecoration(
           color: Colors.lightBlue.withOpacity(onRemove == null ? 0.2 : 0.5),
           borderRadius: const BorderRadius.all(Radius.circular(6))),
@@ -257,22 +301,9 @@ class _CreneauW extends StatelessWidget {
 }
 
 class _Horaires extends StatelessWidget {
-  const _Horaires({super.key});
+  final CreneauHoraireProvider horaires;
 
-  static const ticks = [
-    DateHeure(2000, 1, 8, 0),
-    DateHeure(2000, 1, 9, 0),
-    DateHeure(2000, 1, 10, 0),
-    DateHeure(2000, 1, 11, 0),
-    DateHeure(2000, 1, 12, 0),
-    DateHeure(2000, 1, 13, 0),
-    DateHeure(2000, 1, 14, 0),
-    DateHeure(2000, 1, 15, 0),
-    DateHeure(2000, 1, 16, 0),
-    DateHeure(2000, 1, 17, 0),
-    DateHeure(2000, 1, 18, 0),
-    DateHeure(2000, 1, 19, 0),
-  ];
+  const _Horaires(this.horaires, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +313,9 @@ class _Horaires extends StatelessWidget {
         height: _totalHeight,
         width: 50,
         child: Stack(
-          children: ticks.map((e) {
-            final topRatio = (e.hour - _firstHour) * _oneHourRatio;
+          children: horaires.values.map((e) {
+            final topRatio = (e.hour + e.minute / 60 - horaires.firstHour) *
+                horaires.oneHourRatio;
             return Positioned(
               left: 0,
               top: topRatio * _totalHeight,

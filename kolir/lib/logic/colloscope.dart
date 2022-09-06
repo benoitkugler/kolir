@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -66,24 +67,30 @@ class Colloscope {
 
   final List<Groupe> groupes;
 
+  CreneauHoraireProvider creneauxHoraires;
+
   /// [notes] est un champ de texte libre.
   String notes;
 
-  Colloscope(this._matieres, this.groupes, {this.notes = ""}) {
+  Colloscope(this._matieres, this.groupes,
+      {this.notes = "", this.creneauxHoraires = defautHoraires}) {
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
   }
 
   Colloscope copy() {
     return Colloscope(
-        _matieres.map((k, v) => MapEntry(k, v.map((e) => e.copy()).toList())),
-        groupes.map((e) => e).toList(),
-        notes: notes);
+      _matieres.map((k, v) => MapEntry(k, v.map((e) => e.copy()).toList())),
+      groupes.map((e) => e).toList(),
+      creneauxHoraires: creneauxHoraires.copy(),
+      notes: notes,
+    );
   }
 
   bool isEqual(Colloscope other) =>
       areMatieresEqual(other._matieres, _matieres) &&
       other.groupes.equals(groupes) &&
+      other.creneauxHoraires.equals(creneauxHoraires) &&
       other.notes == notes;
 
   Map<String, dynamic> toJson() {
@@ -91,6 +98,7 @@ class Colloscope {
       "matieres": _matieres.map((k, v) =>
           MapEntry(k.index.toString(), v.map((e) => e.toJson()).toList())),
       "groupes": groupes.map((e) => e.toJson()).toList(),
+      "creneauxHoraires": creneauxHoraires.toJson(),
       "notes": notes,
     };
   }
@@ -104,6 +112,9 @@ class Colloscope {
         ((json["groupes"] ?? []) as List)
             .map((e) => Groupe.fromJson(e))
             .toList(),
+        creneauxHoraires: json["creneauxHoraires"] == null
+            ? defautHoraires
+            : CreneauHoraireProvider.fromJson(json["creneauxHoraires"]),
         notes: json["notes"] ?? "");
   }
 
