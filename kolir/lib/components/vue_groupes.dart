@@ -434,6 +434,8 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                     shrinkWrap: true,
                     children: widget.groupes
                         .map((e) => CheckboxListTile(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6)),
                             dense: true,
                             title: Text(e.name),
                             selected: selectedGroupes.contains(e.id),
@@ -533,7 +535,8 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
                       CheckboxListTile(
                         activeColor: matiere.color,
                         selectedTileColor: matiere.color,
-                        // shape: RoundedRectangleBorder,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
                         value: selectedSemaines.contains(semaine.semaine),
                         selected: selectedSemaines.contains(semaine.semaine),
                         onChanged: isSemaineDisponible(semaine.item)
