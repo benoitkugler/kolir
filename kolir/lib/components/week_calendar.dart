@@ -19,6 +19,7 @@ class WeekCalendar extends StatefulWidget {
 class _WeekCalendarState extends State<WeekCalendar> {
   List<DateHeure> creneaux = [];
   TextEditingController semainesController = TextEditingController();
+  bool showSamedi = false;
 
   @override
   void initState() {
@@ -45,12 +46,29 @@ class _WeekCalendarState extends State<WeekCalendar> {
     });
   }
 
+  // returns an empty list for invalid values
+  static List<int> _parseOneChunk(String s) {
+    if (s.contains("-")) {
+      final l = s.split("-");
+      if (l.length != 2) {
+        return [];
+      }
+      final debut = int.tryParse(l[0].trim());
+      final fin = int.tryParse(l[1].trim());
+      if (debut == null || fin == null || debut > fin) {
+        return [];
+      }
+      return List<int>.generate(fin - debut + 1, (index) => debut + index);
+    }
+    final v = int.tryParse(s.trim());
+    return v == null ? [] : [v];
+  }
+
   List<int> get semaines {
     return semainesController.text
         .split(",")
-        .map((e) => int.tryParse(e.trim()))
-        .where((element) => element != null)
-        .map((e) => e!)
+        .map((s) => _parseOneChunk(s))
+        .reduce((value, element) => [...value, ...element])
         .toList();
   }
 
@@ -104,41 +122,49 @@ class _WeekCalendarState extends State<WeekCalendar> {
                       removeCreneau,
                       addCreneau,
                       moveCreneau),
-                  _Day(
-                      widget.creneauxHoraires,
-                      6,
-                      creneaux.where((dt) => dt.weekday == 6).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
+                  if (showSamedi)
+                    _Day(
+                        widget.creneauxHoraires,
+                        6,
+                        creneaux.where((dt) => dt.weekday == 6).toList(),
+                        removeCreneau,
+                        addCreneau,
+                        moveCreneau),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: SizedBox(
-                      width: 200,
+            SizedBox(
+              width: 300,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CheckboxListTile(
+                        title: const Text("Afficher le samedi"),
+                        value: showSamedi,
+                        onChanged: (b) => setState(() {
+                              showSamedi = b!;
+                            })),
+                    const SizedBox(height: 100),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: TextField(
                         controller: semainesController,
                         decoration: const InputDecoration(
                             label: Text("Semaines"),
-                            helperText: "Semaines séparées par une virgule"),
+                            helperText: "Exemples: 1,3,5 ; 1-12"),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                  ElevatedButton(
-                      onPressed: semaines.isEmpty || creneaux.isEmpty
-                          ? null
-                          : () => widget.onAdd(creneaux, semaines),
-                      child: const Text("Ajouter")),
-                ],
+                    const SizedBox(height: 50),
+                    ElevatedButton(
+                        onPressed: semaines.isEmpty || creneaux.isEmpty
+                            ? null
+                            : () => widget.onAdd(creneaux, semaines),
+                        child: const Text("Ajouter")),
+                  ],
+                ),
               ),
             )
           ],
