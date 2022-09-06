@@ -161,6 +161,7 @@ class _SemaineRow extends StatelessWidget {
       child: Row(
         children: [
           Text("Semaine ${semaine.toString().padLeft(2, '  ')} :"),
+          const SizedBox(width: 10),
           Expanded(child: body)
         ],
       ),
@@ -185,8 +186,11 @@ class ColleW extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
-          color: colle.matiere.color,
-          borderRadius: const BorderRadius.all(Radius.circular(4)),
+          color: colle.matiere.color.withOpacity(0.1),
+          border: Border.all(color: colle.matiere.color),
+          borderRadius: const BorderRadius.all(
+            Radius.circular(4),
+          ),
         ),
         padding: const EdgeInsets.only(left: 8),
         child: Row(
@@ -195,13 +199,14 @@ class ColleW extends StatelessWidget {
             Text(text),
             onDelete == null
                 ? const SizedBox(
-                    height: 30,
+                    height: 25,
                     width: 10,
                   )
                 : IconButton(
-                    splashRadius: 10,
+                    padding: const EdgeInsets.all(4),
+                    splashRadius: 12,
                     onPressed: onDelete,
-                    icon: deleteIcon,
+                    icon: const Icon(clearIcon),
                     color: Colors.red)
           ],
         ),
@@ -213,3 +218,59 @@ class ColleW extends StatelessWidget {
 const deleteIcon = Icon(
   IconData(0xe1b9, fontFamily: 'MaterialIcons'),
 );
+
+const clearIcon = IconData(0xf645, fontFamily: 'MaterialIcons');
+
+/// [MatieresTabs] is a tab view, indexed by [Matiere]
+class MatieresTabs extends StatefulWidget {
+  final Widget Function(Matiere mat) builder;
+
+  const MatieresTabs(this.builder, {super.key});
+
+  @override
+  State<MatieresTabs> createState() => _MatieresTabsState();
+}
+
+class _MatieresTabsState extends State<MatieresTabs>
+    with TickerProviderStateMixin {
+  late final TabController ct;
+
+  @override
+  void initState() {
+    ct = TabController(length: Matiere.values.length, vsync: this);
+    super.initState();
+  }
+
+  Matiere get mat => Matiere.values[ct.index];
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.builder(mat);
+    return Card(
+        child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TabBar(
+                  controller: ct,
+                  onTap: (value) => setState(() {
+                    ct.index = value;
+                  }),
+                  isScrollable: true,
+                  labelColor: Colors.black,
+                  splashBorderRadius:
+                      const BorderRadius.all(Radius.circular(4)),
+                  tabs: Matiere.values
+                      .map((e) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(formatMatiere(e)),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 10),
+                Flexible(child: child),
+              ],
+            )));
+  }
+}

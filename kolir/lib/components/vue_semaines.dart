@@ -69,7 +69,7 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final group = creneau.groupe?.name ?? "<Aucun groupe>";
+    final group = creneau.groupe?.name ?? "?";
     return Tooltip(
       message: formatMatiere(matiere),
       child: Padding(
@@ -77,9 +77,10 @@ class _Group extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
+              border: Border.all(color: matiere.color),
               borderRadius: const BorderRadius.all(Radius.circular(8)),
-              color: matiere.color),
-          child: Text("${creneau.date.formatDateHeure()} $group"),
+              color: matiere.color.withOpacity(0.4)),
+          child: Text("${creneau.date.formatDateHeure()}  $group "),
         ),
       ),
     );

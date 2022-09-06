@@ -38,11 +38,14 @@ class _Home extends StatefulWidget {
 }
 
 class _HomeState extends State<_Home> {
-  Colloscope col = Colloscope({}, []);
+  Colloscope currentColloscope = Colloscope({}, []);
+  Colloscope savedColloscope =
+      Colloscope({}, []); // cached version for the lastly saved
+
   var mode = ModeView.matieres;
   final notesController = TextEditingController();
 
-  bool isDirty = false;
+  bool get isDirty => !currentColloscope.isEqual(savedColloscope);
 
   @override
   void initState() {
@@ -61,97 +64,20 @@ class _HomeState extends State<_Home> {
       col = Colloscope({}, []);
     }
     setState(() {
-      this.col = col;
+      currentColloscope = col;
+      savedColloscope = col.copy();
       notesController.text = col.notes;
-      isDirty = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Colloscope chargé."), backgroundColor: Colors.green));
   }
 
-  void addGroupe() {
-    setState(() {
-      col.addGroupe();
-      isDirty = true;
-    });
-  }
-
-  void removeGroupe(GroupeID groupe) {
-    setState(() {
-      col.removeGroupe(groupe);
-      isDirty = true;
-    });
-  }
-
-  void addCreneaux(Matiere mat, List<DateHeure> hours, List<int> semaines) {
-    setState(() {
-      col.addCreneaux(mat, hours, semaines);
-      isDirty = true;
-    });
-  }
-
-  void removeCreneau(Matiere mat, int creneauIndex) {
-    setState(() {
-      col.removeCreneau(mat, creneauIndex);
-      isDirty = true;
-    });
-  }
-
-  void onToogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
-    setState(() {
-      col.toogleCreneau(groupe, mat, creneauIndex);
-      isDirty = true;
-    });
-  }
-
-  void attribueRegulier(
-      Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau) {
-    // TODO
-  }
-
-  void _export() async {
-    final matieres = matieresToHTML(col);
-    final groupes = groupesToHTML(col);
-    final semaines = semainesToHTML(col, matieresColors);
-
-    final matieresPath =
-        await saveDocument(matieres, "colloscope_matieres.html");
-    final groupesPath = await saveDocument(groupes, "colloscope_groupes.html");
-    final semainesPath =
-        await saveDocument(semaines, "colloscope_semaines.html");
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath"),
-        backgroundColor: Colors.green));
-  }
-
-  Widget get body {
-    switch (mode) {
-      case ModeView.semaines:
-        return VueSemaineW(col.nbCreneauxVaccants(), col.parSemaine());
-      case ModeView.groupes:
-        return VueGroupeW(
-          col.groupes,
-          col.parGroupe(),
-          col.diagnostics(),
-          col.parMatiere(),
-          onAddGroupe: addGroupe,
-          onRemoveGroupe: removeGroupe,
-          onToogleCreneau: onToogleCreneau,
-          onAttribueRegulier: attribueRegulier,
-        );
-      case ModeView.matieres:
-        return VueMatiereW(col.parMatiere(), addCreneaux, removeCreneau);
-    }
-  }
-
   void _save() async {
-    final path = await col.save();
+    final path = await currentColloscope.save();
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text("Enregistré dans $path.")));
     setState(() {
-      isDirty = false;
+      savedColloscope = currentColloscope.copy();
     });
   }
 
@@ -173,7 +99,86 @@ class _HomeState extends State<_Home> {
           );
         });
     if (confirm != null && confirm) {
-      _loadFromFile();
+      setState(() {
+        currentColloscope = savedColloscope.copy();
+      });
+    }
+  }
+
+  void addGroupe() {
+    setState(() {
+      currentColloscope.addGroupe();
+    });
+  }
+
+  void removeGroupe(GroupeID groupe) {
+    setState(() {
+      currentColloscope.removeGroupe(groupe);
+    });
+  }
+
+  void addCreneaux(Matiere mat, List<DateHeure> hours, List<int> semaines) {
+    setState(() {
+      currentColloscope.addCreneaux(mat, hours, semaines);
+    });
+  }
+
+  void removeCreneau(Matiere mat, int creneauIndex) {
+    setState(() {
+      currentColloscope.removeCreneau(mat, creneauIndex);
+    });
+  }
+
+  void toogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
+    setState(() {
+      currentColloscope.toogleCreneau(groupe, mat, creneauIndex);
+    });
+  }
+
+  void attribueCreneaux(Matiere matiere, List<GroupeID> groupes,
+      List<int> semaines, bool usePermuation) {
+    setState(() {
+      currentColloscope.attribueCyclique(
+          matiere, groupes, semaines, usePermuation);
+    });
+  }
+
+  void _export() async {
+    final matieres = matieresToHTML(currentColloscope);
+    final groupes = groupesToHTML(currentColloscope);
+    final semaines = semainesToHTML(currentColloscope, matieresColors);
+
+    final matieresPath =
+        await saveDocument(matieres, "colloscope_matieres.html");
+    final groupesPath = await saveDocument(groupes, "colloscope_groupes.html");
+    final semainesPath =
+        await saveDocument(semaines, "colloscope_semaines.html");
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath"),
+        backgroundColor: Colors.green));
+  }
+
+  Widget get body {
+    switch (mode) {
+      case ModeView.semaines:
+        return VueSemaineW(currentColloscope.nbCreneauxVaccants(),
+            currentColloscope.parSemaine());
+      case ModeView.groupes:
+        return VueGroupeW(
+          currentColloscope.groupes,
+          currentColloscope.parGroupe(),
+          currentColloscope.diagnostics(),
+          currentColloscope.parMatiere(),
+          onAddGroupe: addGroupe,
+          onRemoveGroupe: removeGroupe,
+          onToogleCreneau: toogleCreneau,
+          onAttribueCreneaux: attribueCreneaux,
+        );
+      case ModeView.matieres:
+        return VueMatiereW(
+            currentColloscope.parMatiere(), addCreneaux, removeCreneau);
     }
   }
 
@@ -184,8 +189,9 @@ class _HomeState extends State<_Home> {
   }
 
   void _saveNotes() async {
-    col.notes = notesController.text;
-    await col.save();
+    currentColloscope.notes = notesController.text;
+    savedColloscope.notes = notesController.text;
+    await savedColloscope.save();
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text("Notes enregistrées.")));
   }
@@ -257,7 +263,7 @@ class _HomeState extends State<_Home> {
         });
     if (confirm != null && confirm) {
       setState(() {
-        col.reset();
+        currentColloscope.reset();
       });
     }
   }
@@ -308,7 +314,7 @@ class _HomeState extends State<_Home> {
               child: ElevatedButton.icon(
                   onPressed: _clear,
                   icon: const Icon(
-                    IconData(0xf645, fontFamily: 'MaterialIcons'),
+                    clearIcon,
                     color: Colors.red,
                   ),
                   label: const Text("Effacer"))),

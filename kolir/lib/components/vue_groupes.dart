@@ -5,7 +5,7 @@ import 'package:kolir/logic/utils.dart';
 
 typedef Creneaux = Map<Matiere, VueMatiere>;
 
-final colorWarning = Colors.deepOrange.shade200;
+final colorWarning = Colors.deepOrange.shade300;
 
 class VueGroupeW extends StatefulWidget {
   final List<Groupe> groupes;
@@ -18,15 +18,14 @@ class VueGroupeW extends StatefulWidget {
 
   final void Function(GroupeID groupe, Matiere mat, int creneauIndex)
       onToogleCreneau;
-  final void Function(
-          Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau)
-      onAttribueRegulier;
+  final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
+      bool usePermutation) onAttribueCreneaux;
 
   const VueGroupeW(this.groupes, this.colles, this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
       required this.onToogleCreneau,
-      required this.onAttribueRegulier,
+      required this.onAttribueCreneaux,
       super.key});
 
   @override
@@ -38,7 +37,6 @@ class _VueGroupeWState extends State<VueGroupeW> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = widget.colles.entries.toList();
     final actions = [
       ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -54,6 +52,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
             onPressed: () => setState(() {
                   isInEdit = !isInEdit;
                 }),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: isInEdit ? Colors.orange : null),
             child:
                 Text(isInEdit ? "Terminer" : "Ajouter plusieurs créneaux...")),
       )
@@ -89,8 +89,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
               ),
             ],
           ),
-          secondChild: _GroupesCreneaux(widget.colles.keys.toList(),
-              widget.creneaux, widget.onAttribueRegulier),
+          secondChild: _Assistant(
+              widget.groupes, widget.creneaux, widget.onAttribueCreneaux),
         ),
       ),
     );
@@ -139,7 +139,6 @@ class _GroupeWState extends State<_GroupeW> {
 
   @override
   Widget build(BuildContext context) {
-    print(widget.creneaux[Matiere.maths]);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Card(
@@ -219,7 +218,7 @@ class _GroupStaticW extends StatelessWidget {
   }
 }
 
-class _GroupEditW extends StatefulWidget {
+class _GroupEditW extends StatelessWidget {
   final GroupeID groupe;
   final Creneaux creneaux;
 
@@ -229,53 +228,15 @@ class _GroupEditW extends StatefulWidget {
       {super.key});
 
   @override
-  State<_GroupEditW> createState() => _GroupEditWState();
-}
-
-class _GroupEditWState extends State<_GroupEditW>
-    with TickerProviderStateMixin {
-  late final TabController ct;
-
-  @override
-  void initState() {
-    ct = TabController(length: Matiere.values.length, vsync: this);
-    super.initState();
-  }
-
-  Matiere get mat => Matiere.values[ct.index];
-
-  @override
   Widget build(BuildContext context) {
-    return Card(
-        child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                TabBar(
-                  controller: ct,
-                  onTap: (value) => setState(() {
-                    ct.index = value;
-                  }),
-                  isScrollable: true,
-                  labelColor: Colors.black,
-                  splashBorderRadius:
-                      const BorderRadius.all(Radius.circular(4)),
-                  tabs: Matiere.values
-                      .map((e) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(formatMatiere(e)),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: 10),
-                _GroupEditMatiere(
-                  widget.groupe,
-                  mat,
-                  widget.creneaux[mat] ?? [],
-                  (creneauIndex) => widget.onToogleCreneau(mat, creneauIndex),
-                ),
-              ],
-            )));
+    return MatieresTabs(
+      (mat) => _GroupEditMatiere(
+        groupe,
+        mat,
+        creneaux[mat] ?? [],
+        (creneauIndex) => onToogleCreneau(mat, creneauIndex),
+      ),
+    );
   }
 }
 
@@ -378,98 +339,79 @@ class _DiagnosticW extends StatelessWidget {
   }
 }
 
-// permet de modifier les heures d'un groupe,
-// en choissant parmi les créneaux définis
-class _GroupesCreneaux extends StatefulWidget {
-  final List<GroupeID> groupes;
+// permet d'attribuer plusieurs créneaux d'un coup
+class _Assistant extends StatelessWidget {
+  final List<Groupe> groupes;
   final Map<Matiere, VueMatiere> creneaux;
 
-  final void Function(
-          Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau)
-      onAttribueRegulier;
+  final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
+      bool usePermutation) onAttribue;
 
-  const _GroupesCreneaux(this.groupes, this.creneaux, this.onAttribueRegulier,
-      {super.key});
-
-  @override
-  State<_GroupesCreneaux> createState() => _GroupesCreneauxState();
-}
-
-class _GroupesCreneauxState extends State<_GroupesCreneaux> {
-  Matiere? matiere;
+  const _Assistant(this.groupes, this.creneaux, this.onAttribue, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    Widget body =
-        const Center(child: Text("Veuillez sélectionner une matière"));
-    if (matiere != null) {
-      body = _MatiereCreneaux(
-        matiere!,
-        widget.groupes,
-        widget.creneaux[matiere!] ?? [],
-        (origin, dst) {}, // TODO
-        (semaine) {}, // TODO
-        (premierGroupe, premierCreneau) =>
-            widget.onAttribueRegulier(matiere!, premierGroupe, premierCreneau),
-      );
-    }
-    return Column(
-      children: [
-        DropdownButton(
-            borderRadius: const BorderRadius.all(Radius.circular(4)),
-            hint: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text("Choisir la matière..."),
-            ),
-            items: Matiere.values
-                .map((e) => DropdownMenuItem(
-                      value: e,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(formatMatiere(e)),
-                      ),
-                    ))
-                .toList(),
-            value: matiere,
-            onChanged: (mat) {
-              if (mat == null) {
-                return;
-              }
-              setState(() {
-                matiere = mat;
-              });
-            }),
-        const SizedBox(height: 10),
-        body,
-      ],
-    );
+    return MatieresTabs((mat) => _AssistantMatiere(
+          mat,
+          groupes,
+          creneaux[mat] ?? [],
+          (groupes, semaines, p) => onAttribue(mat, groupes, semaines, p),
+        ));
   }
 }
 
-class _MatiereCreneaux extends StatefulWidget {
+class _AssistantMatiere extends StatefulWidget {
   final Matiere matiere;
-  final List<GroupeID> groupes;
+  final List<Groupe> groupes;
   final VueMatiere creneaux;
 
-  final void Function(PopulatedCreneau src, PopulatedCreneau dst)
-      onAttributeCreneau;
-  final void Function(int semaine) onClearCreneaux;
-  final void Function(GroupeID premierGroupe, DateHeure premierCreneau)
-      onAttribueRegulier;
+  final void Function(
+          List<GroupeID> groupes, List<int> semaines, bool usePermutation)
+      onAttribue;
 
-  const _MatiereCreneaux(this.matiere, this.groupes, this.creneaux,
-      this.onAttributeCreneau, this.onClearCreneaux, this.onAttribueRegulier,
+  const _AssistantMatiere(
+      this.matiere, this.groupes, this.creneaux, this.onAttribue,
       {super.key});
 
   @override
-  State<_MatiereCreneaux> createState() => _MatiereCreneauxState();
+  State<_AssistantMatiere> createState() => _AssistantMatiereState();
 }
 
-class _MatiereCreneauxState extends State<_MatiereCreneaux> {
-  bool inWizard = false;
+class _AssistantMatiereState extends State<_AssistantMatiere> {
+  Set<GroupeID> selectedGroupes = {};
+  Set<int> selectedSemaines = {};
 
-  GroupeID? selectedGroupe;
-  DateHeure? selectedCreneau;
+  bool usePermutation = true;
+
+  @override
+  void didUpdateWidget(covariant _AssistantMatiere oldWidget) {
+    selectedSemaines.clear();
+    super.didUpdateWidget(oldWidget);
+  }
+
+  void _onAttribue() {
+    final groupes = selectedGroupes.toList();
+    groupes.sort();
+    widget.onAttribue(groupes, selectedSemaines.toList(), usePermutation);
+    setState(() {
+      selectedGroupes.clear();
+      selectedSemaines.clear();
+    });
+  }
+
+  bool isSelectionValide() {
+    if (selectedGroupes.isEmpty || selectedSemaines.isEmpty) {
+      return false;
+    }
+    // pour simplifier on impose l'égalite entre le
+    // nombre de groupe et de créneaux
+    return selectedSemaines.every((semaineIndex) {
+      final creneaux =
+          widget.creneaux.where((s) => s.semaine == semaineIndex).first.item;
+      return creneaux.where((cr) => cr.groupe == null).length ==
+          selectedGroupes.length;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -477,225 +419,150 @@ class _MatiereCreneauxState extends State<_MatiereCreneaux> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (inWizard)
-          const Padding(
-            padding: EdgeInsets.only(top: 12),
-            child: Text(
-              """
-              Cet assistant vous permet d'attribuer rapidement des créneaux de façon régulière.
-              Les créneaux seront attribués séquentiellement en commençant par placer le premier groupe choisi sur le premier créneau choisi.
-              Attention, les créneaux déjà attribués seront ignorés.
-              """,
-            ),
-          ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               flex: 1,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                  inWizard ? "Premier groupe" : "Groupes",
-                  style: const TextStyle(fontSize: 18),
+                const Text(
+                  "Choix des groupes",
+                  style: TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 10),
                 ListView(
                     shrinkWrap: true,
                     children: widget.groupes
-                        .map((e) => inWizard
-                            ? RadioListTile<GroupeID>(
-                                dense: true,
-                                title: Text(e.toString()), // TODO
-                                value: e,
-                                groupValue: selectedGroupe,
-                                onChanged: (g) => setState(() {
-                                      selectedGroupe = g;
-                                    }))
-                            : _DraggableGroup(
-                                PopulatedCreneau(0, emptyDate(), null))) // TODO
+                        .map((e) => CheckboxListTile(
+                            dense: true,
+                            title: Text(e.name),
+                            selected: selectedGroupes.contains(e.id),
+                            value: selectedGroupes.contains(e.id),
+                            onChanged: (checked) => setState(() {
+                                  checked!
+                                      ? selectedGroupes.add(e.id)
+                                      : selectedGroupes.remove(e.id);
+                                })))
                         .toList()),
-                const SizedBox(height: 20),
-                inWizard
-                    ? Row(children: [
-                        ElevatedButton(
-                            onPressed: () => setState(() {
-                                  inWizard = false;
-                                }),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text("Annuler"),
-                            )),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: ElevatedButton(
-                              onPressed: selectedGroupe == null ||
-                                      selectedCreneau == null
-                                  ? null
-                                  : () {
-                                      widget.onAttribueRegulier(
-                                          selectedGroupe!, selectedCreneau!);
-                                      setState(() {
-                                        inWizard = false;
-                                        selectedGroupe = null;
-                                        selectedCreneau = null;
-                                      });
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      inWizard ? Colors.green : null),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text(
-                                  "Valider",
-                                  textAlign: TextAlign.center,
-                                ),
-                              )),
-                        ),
-                      ])
-                    : ElevatedButton(
-                        onPressed: () => setState(() {
-                              inWizard = true;
-                            }),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            "Attribuer régulièrement...",
-                            textAlign: TextAlign.center,
-                          ),
-                        )),
               ]),
             ),
             Expanded(
               flex: 6,
-              child: _MatiereW(
-                inWizard,
-                selectedCreneau,
+              child: _AssistantMatiereCreneaux(
+                selectedSemaines,
                 widget.matiere,
                 widget.creneaux,
-                widget.onAttributeCreneau,
-                widget.onClearCreneaux,
-                (creneau) => setState(() {
-                  selectedCreneau = creneau;
+                (semaine, selected) => setState(() {
+                  selected
+                      ? selectedSemaines.add(semaine)
+                      : selectedSemaines.remove(semaine);
                 }),
               ),
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Flexible(
+            child: CheckboxListTile(
+                title: const Text(
+                    "Appliquer une permutation circulaire d'une semaine à l'autre"),
+                value: usePermutation,
+                onChanged: (value) => setState(() {
+                      usePermutation = value!;
+                    })),
+          ),
+          const Spacer(),
+          Tooltip(
+            message:
+                "Placer les groupes sélectionnés sur les semaines sélectionnées.",
+            child: ElevatedButton(
+                onPressed: isSelectionValide() ? _onAttribue : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    "Atttribuer les créneaux",
+                    textAlign: TextAlign.center,
+                  ),
+                )),
+          ),
+        ])
       ],
     );
   }
 }
 
-class _DraggableGroup extends StatelessWidget {
-  final PopulatedCreneau creneau; // date is optional
-  final bool dense;
-  const _DraggableGroup(this.creneau, {super.key, this.dense = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-        margin: dense
-            ? const EdgeInsets.symmetric(horizontal: 6, vertical: 0)
-            : null,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: dense ? 2 : 8),
-          decoration: const BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(4))),
-          child: Text(
-            creneau.groupe?.name ?? "",
-            textAlign: TextAlign.center,
-          ),
-        ));
-  }
-}
-
-class _MatiereW extends StatelessWidget {
-  final bool inWizard;
-  final DateHeure? selectedCreneau;
+class _AssistantMatiereCreneaux extends StatelessWidget {
+  final Set<int> selectedSemaines;
 
   final Matiere matiere;
   final VueMatiere semaines;
 
-  final void Function(PopulatedCreneau src, PopulatedCreneau dst)
-      onAttributeCreneau;
-  final void Function(int semaine) onClearCreneaux;
-  final void Function(DateHeure creneau) onSelectCreneau;
+  final void Function(int semaine, bool selected) onSelectSemaine;
 
-  const _MatiereW(
-      this.inWizard,
-      this.selectedCreneau,
-      this.matiere,
-      this.semaines,
-      this.onAttributeCreneau,
-      this.onClearCreneaux,
-      this.onSelectCreneau,
+  const _AssistantMatiereCreneaux(
+      this.selectedSemaines, this.matiere, this.semaines, this.onSelectSemaine,
       {super.key});
 
-  bool isCreneauError(
-      List<PopulatedCreneau> semaine, PopulatedCreneau creneau) {
-    if (creneau.groupe == null) {
-      return false;
-    }
-    return semaine
-            .where((element) => element.groupe == creneau.groupe)
-            .length >=
-        2;
+  bool isSemaineDisponible(List<PopulatedCreneau> semaine) {
+    return semaine.every((cr) => cr.groupe == null);
   }
 
   @override
   Widget build(BuildContext context) {
     return Card(
         child: Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Column(
         children: [
-          Text(
-            inWizard ? "Premier créneau" : "Créneaux",
-            style: const TextStyle(fontSize: 18),
+          const Text(
+            "Créneaux",
+            style: TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            child: SemaineList(
-              semaines.map((semaine) {
-                return SemaineTo(
-                    semaine.semaine,
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            children: semaine.item
-                                .map(
-                                  (e) => inWizard
-                                      ? _CreneauButton(
-                                          Colle(e.date, matiere),
-                                          e.groupe?.id,
-                                          selectedCreneau == e.date,
-                                          () => onSelectCreneau(e.date),
-                                        )
-                                      : _Creneau(
-                                          Colle(e.date, matiere),
-                                          _CS.dejaPris,
-                                          () {},
-                                        ),
-                                )
-                                .toList(),
-                          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.50,
+            child: SingleChildScrollView(
+              child: SemaineList(
+                semaines.map((semaine) {
+                  return SemaineTo(
+                      semaine.semaine,
+                      CheckboxListTile(
+                        activeColor: matiere.color,
+                        selectedTileColor: matiere.color,
+                        // shape: RoundedRectangleBorder,
+                        value: selectedSemaines.contains(semaine.semaine),
+                        selected: selectedSemaines.contains(semaine.semaine),
+                        onChanged: isSemaineDisponible(semaine.item)
+                            ? (value) =>
+                                onSelectSemaine(semaine.semaine, value!)
+                            : null,
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Wrap(
+                                children: semaine.item
+                                    .map(
+                                      (e) => _Creneau(
+                                        Colle(e.date, matiere),
+                                        e.groupe == null
+                                            ? _CS.disponible
+                                            : _CS.dejaPris,
+                                        null,
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                          ],
                         ),
-                        if (!inWizard)
-                          Tooltip(
-                            message: "Enlever les affectation courantes",
-                            child: IconButton(
-                                splashRadius: 20,
-                                onPressed: () =>
-                                    onClearCreneaux(semaine.semaine),
-                                icon: deleteIcon),
-                          )
-                      ],
-                    ));
-              }).toList(),
-              "",
+                      ));
+                }).toList(),
+                "Aucun créneau n'est définie pour cette matière.",
+              ),
             ),
           ),
         ],
@@ -711,7 +578,7 @@ class _Creneau extends StatelessWidget {
 
   final _CS state;
 
-  final void Function() onPressed;
+  final void Function()? onPressed;
 
   const _Creneau(this.colle, this.state, this.onPressed, {super.key});
 
@@ -744,31 +611,6 @@ class _Creneau extends StatelessWidget {
             onPressed: state == _CS.dejaPris ? null : onPressed,
             child: Text(time, style: const TextStyle(fontSize: 12)),
           ),
-        ));
-  }
-}
-
-class _CreneauButton extends StatelessWidget {
-  final Colle colle;
-  final GroupeID? group;
-
-  final bool isSelected;
-
-  final void Function() onSelect;
-
-  const _CreneauButton(this.colle, this.group, this.isSelected, this.onSelect,
-      {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final time = colle.date.formatDateHeure();
-    return Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: OutlinedButton(
-          onPressed: group == null ? onSelect : null,
-          style: OutlinedButton.styleFrom(
-              backgroundColor: isSelected ? colle.matiere.color : null),
-          child: Text(group != null ? "$time  $group" : time),
         ));
   }
 }

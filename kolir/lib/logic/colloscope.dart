@@ -34,6 +34,27 @@ class Groupe {
   factory Groupe.fromJson(dynamic json) {
     return Groupe(json as int);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Groupe && other.runtimeType == runtimeType && other.id == id;
+
+  @override
+  int get hashCode => id;
+}
+
+bool areMatieresEqual(Map<Matiere, _Creneaux> m1, Map<Matiere, _Creneaux> m2) {
+  if (m1.length != m2.length) {
+    return false;
+  }
+  for (var mat in m1.keys) {
+    final l1 = m1[mat] ?? [];
+    final l2 = m2[mat] ?? [];
+    if (!l1.equals(l2)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// [Colloscope] est la représentation en mémoire vive
@@ -52,6 +73,18 @@ class Colloscope {
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
   }
+
+  Colloscope copy() {
+    return Colloscope(
+        _matieres.map((k, v) => MapEntry(k, v.map((e) => e.copy()).toList())),
+        groupes.map((e) => e).toList(),
+        notes: notes);
+  }
+
+  bool isEqual(Colloscope other) =>
+      areMatieresEqual(other._matieres, _matieres) &&
+      other.groupes.equals(groupes) &&
+      other.notes == notes;
 
   Map<String, dynamic> toJson() {
     return {
@@ -277,37 +310,32 @@ class Colloscope {
         _PopulatedCreneau(cr.date, cr.groupeID == null ? groupe : null);
   }
 
-  void attribueCyclique(List<GroupeID> groupes, List<int> semaines) {}
+  /// [attribueCyclique] attribue les créneaux des semaines donnés aux
+  /// groupes donnés.
+  /// Pour simplifier, on suppose que le nombre de groupes correspond au nombre
+  /// de créneaux disponibles.
+  void attribueCyclique(Matiere matiere, List<GroupeID> groupes,
+      List<int> semaines, bool usePermuation) {
+    var permutatioOffset = 0;
+    final creneaux = _matieres[matiere] ?? [];
+    for (var semaineIndex in semaines) {
+      final creneauxSemaine = creneaux
+          .where((cr) => cr.date.semaine == semaineIndex && cr.groupeID == null)
+          .toList();
 
-  // /// [attribueRegulier] remplie les créneaux disponibles dans la matière [mat]
-  // /// en commençant par [premierGroupe] -> [premierCreneauIndex]
-  // /// les créneaux déjà attribués sont ignorés
-  // void attribueRegulier(
-  //     Matiere mat, GroupeID premierGroupe, int premierCreneauIndex) {
-  //   // to simplify, build the list of available creaneaux, starting at premierCreneauIndex
-  //   final ordered = [
-  //     ...(_matieres[mat] ?? []).sublist(premierCreneauIndex),
-  //     ...(_matieres[mat] ?? []).sublist(0, premierCreneauIndex)
-  //   ];
-  //   final disponibles = ordered.where((cr) => cr.groupeID == null).toList();
+      final L = creneauxSemaine.length;
+      assert(L == groupes.length);
+      for (var i = 0; i < L; i++) {
+        final groupe = groupes[(permutatioOffset + i) % L];
+        creneauxSemaine[i].groupeID = groupe;
+      }
 
-  //   var currentGroupeIndex = groupes.indexWhere((gr) => gr.id == premierGroupe);
-  //   if (currentGroupeIndex == -1) {
-  //     return;
-  //   }
-
-  //   for (var creneau in disponibles) {
-  //     final currentGroupe = groupes[currentGroupeIndex % groupes.length];
-  //     final gr = _groupes.putIfAbsent(currentGroupe, () => {});
-  //     final matList = gr.putIfAbsent(mat, () => []);
-  //     matList.add(creneau);
-
-  //     currentGroupeIndex += 1; // iterate in parallel
-  //   }
-
-  //   // clear the NoGroup group
-  //   disponibles.clear();
-  // }
+      // apply the permutation if needed
+      if (usePermuation) {
+        permutatioOffset++;
+      }
+    }
+  }
 }
 
 enum Matiere {
@@ -322,19 +350,6 @@ enum Matiere {
 
 // ---------------------------------------------------------
 
-typedef HeuresGroupe = Map<Matiere, HeuresMatiereGroupe>;
-
-extension HG on HeuresGroupe {
-  Map<String, dynamic> toJson() {
-    return map((key, value) => MapEntry(key.index.toString(), value.toJson()));
-  }
-
-  static HeuresGroupe fromJson(Map<String, dynamic> json) {
-    return json.map((key, value) =>
-        MapEntry(Matiere.values[int.parse(key)], HMG.fromJson(value)));
-  }
-}
-
 class Colle {
   final DateHeure date;
   final Matiere matiere;
@@ -342,19 +357,6 @@ class Colle {
 }
 
 typedef VueGroupe = List<SemaineTo<List<Colle>>>; // semaines => colles
-typedef HeuresMatiereGroupe = List<DateHeure>;
-
-extension HMG on HeuresMatiereGroupe {
-  List<Map<String, dynamic>> toJson() {
-    return map((e) => e.toJson()).toList();
-  }
-
-  static HeuresMatiereGroupe fromJson(List<dynamic> json) {
-    return json
-        .map((e) => DateHeure.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-}
 
 typedef VueSemaine = Map<Matiere, List<PopulatedCreneau>>;
 
@@ -366,9 +368,13 @@ typedef VueMatiere = List<SemaineTo<List<PopulatedCreneau>>>;
 
 class _PopulatedCreneau {
   final DateHeure date;
-  final GroupeID? groupeID;
+  GroupeID? groupeID;
 
-  const _PopulatedCreneau(this.date, this.groupeID);
+  _PopulatedCreneau(this.date, this.groupeID);
+
+  _PopulatedCreneau copy() {
+    return _PopulatedCreneau(date, groupeID);
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -381,6 +387,16 @@ class _PopulatedCreneau {
     return _PopulatedCreneau(
         DateHeure.fromJson(json["date"]), json["groupeID"]);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _PopulatedCreneau &&
+      other.runtimeType == runtimeType &&
+      other.date == date &&
+      other.groupeID == groupeID;
+
+  @override
+  int get hashCode => date.hashCode + groupeID.hashCode;
 }
 
 class PopulatedCreneau {
