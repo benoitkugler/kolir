@@ -33,6 +33,7 @@ class VueSemaineW extends StatelessWidget {
               semaines
                   .map((e) => SemaineTo(e.semaine, _SemaineBody(e.item)))
                   .toList(),
+              "Aucune colle n'est prévue.",
             ),
           ),
         ));
@@ -68,8 +69,7 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final group =
-        creneau.groupeID == NoGroup ? "<Aucun groupe>" : creneau.groupeID;
+    final group = creneau.groupe?.name ?? "<Aucun groupe>";
     return Tooltip(
       message: formatMatiere(matiere),
       child: Padding(

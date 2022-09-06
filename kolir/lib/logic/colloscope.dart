@@ -1,13 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-
-/// NoGroup est une valeur spéciale utilisée pour
-/// les créneaux non prévus mais non attribués à un groupe.
-const NoGroup = "";
 
 typedef Collisions = Map<DateHeure, List<Matiere>>;
 
@@ -22,440 +19,58 @@ class Diagnostic {
   const Diagnostic(this.collisions, this.semainesChargees);
 }
 
-// /// [Colloscope] est la représentation en mémoire vive
-// /// d'un colloscope.
-// /// Il peut être enregistré (au format JSON), et affiché
-// /// sous différente formes (par matière, par semaine, par élève)
-// class Colloscope {
-//   /// les groupes sont identifiés par leur index
-//   Map<GroupeID, HeuresGroupe> _groupes;
+typedef GroupeID = int;
 
-//   /// date du lundi de la premiere semaine (Semaine 1)
-//   DateTime debut;
+class Groupe {
+  final GroupeID id;
+  const Groupe(this.id);
 
-//   /// premiereSemaine est le numéro externe de la première semaine interne
-//   /// (indexée par 0)
-//   int premiereSemaine;
+  String get name => "G$id";
 
-//   /// [notes] est un champ de texte libre.
-//   String notes;
+  int toJson() {
+    return id;
+  }
 
-//   Colloscope(this._groupes, this.debut,
-//       {this.premiereSemaine = 1, this.notes = ""}) {
-//     assert(premiereSemaine >= 1);
-
-//     assert(_groupes.values.every((element) =>
-//         element.values.every((dts) => dts.every((dt) => dt.isAfter(debut)))));
-
-//     assert(debut.weekday == DateTime.monday);
-//     assert(debut.hour == 0);
-//     assert(debut.minute == 0);
-//     assert(debut.second == 0);
-//   }
-
-//   factory Colloscope.empty() {
-//     var now = DateTime.now();
-//     now = DateTime(now.year, now.month, now.day); // remove hour, minutes, ...
-//     now = now.subtract(Duration(days: now.weekday - 1)); // shift to monday
-//     return Colloscope({}, now);
-//   }
-
-//   Map<String, dynamic> toJson() {
-//     return {
-//       "groupes": _groupes.map((k, v) => MapEntry(k, v.toJson())),
-//       "debut": debut.toIso8601String(),
-//       "premiereSemaine": premiereSemaine,
-//       "notes": notes,
-//     };
-//   }
-
-//   factory Colloscope.fromJson(Map<String, dynamic> json) {
-//     return Colloscope(
-//         (json["groupes"] as Map).map((k, v) => MapEntry(k, HG.fromJson(v))),
-//         DateTime.parse(json["debut"]),
-//         premiereSemaine: (json["premiereSemaine"] ?? 1) as int,
-//         notes: json["notes"] ?? "");
-//   }
-
-//   static Future<File> get _saveFile async {
-//     final directory = await getApplicationDocumentsDirectory();
-//     final path = join(directory.path, "kolir.json");
-//     return File(path);
-//   }
-
-//   Future<String> save() async {
-//     final file = await _saveFile;
-//     await file
-//         .writeAsString(const JsonEncoder.withIndent(" ").convert(toJson()));
-//     return file.path;
-//   }
-
-//   static Future<Colloscope> load() async {
-//     final file = await _saveFile;
-//     final ok = await file.exists();
-//     if (!ok) {
-//       return Colloscope.empty();
-//     }
-
-//     // Read the file
-//     final contents = await file.readAsString();
-
-//     return Colloscope.fromJson(jsonDecode(contents));
-//   }
-
-//   /// [_week] renvoie l'index de la semaine par rapport à debut :
-//   /// ```week(debut) == 0```
-//   int _week(DateTime date) {
-//     return date.difference(debut).inDays ~/ 7; // starting at zero
-//   }
-
-//   DateHeure _publy(DateTime date) {
-//     return DateHeure(
-//         _week(date) + premiereSemaine, date.weekday, date.hour, date.minute);
-//   }
-
-//   /// [parSemaine] trie les colles par semaine et renvoie une liste
-//   /// contigue de semaines
-//   List<VueSemaine> parSemaine() {
-//     final semaines = <int, VueSemaine>{};
-//     for (var groupeEntry in _groupes.entries) {
-//       final groupe = groupeEntry.value;
-//       for (var element in groupe.entries) {
-//         final matiere = element.key;
-//         for (var date in element.value) {
-//           final weekIndex = _week(date);
-//           final semaine = semaines.putIfAbsent(weekIndex, () => {});
-//           final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
-//           groupesParMatiere.add(PopulatedCreneau(date, groupeEntry.key));
-//         }
-//       }
-//     }
-//     return _semaineMapToList(semaines, {});
-//   }
-
-//   VueGroupe _groupeSemaines(GroupeID groupe) {
-//     final semaines = <int, List<Colle>>{};
-//     for (var element in _groupes[groupe]!.entries) {
-//       final matiere = element.key;
-//       for (var date in element.value) {
-//         final weekIndex = _week(date);
-//         final semaine = semaines.putIfAbsent(weekIndex, () => []);
-//         semaine.add(Colle(date, matiere));
-//       }
-//     }
-//     for (var l in semaines.values) {
-//       l.sort((a, b) => a.matiere.index - b.matiere.index);
-//     }
-//     return _semaineMapToList(semaines, <Colle>[]);
-//   }
-
-//   /// les créneaux non attribués sont ignorés
-//   Map<GroupeID, VueGroupe> parGroupe() {
-//     final out = _groupes.map((k, e) => MapEntry(k, _groupeSemaines(k)));
-//     out.remove(NoGroup);
-//     return out;
-//   }
-
-//   Map<Matiere, VueMatiere> parMatiere() {
-//     final tmp = <Matiere, Map<int, List<PopulatedCreneau>>>{};
-//     for (var groupItem in _groupes.entries) {
-//       for (var item in groupItem.value.entries) {
-//         final matiere = item.key;
-//         final semaines = tmp.putIfAbsent(matiere, () => {});
-//         for (var date in item.value) {
-//           final weekIndex = _week(date);
-//           final semaine = semaines.putIfAbsent(weekIndex, () => []);
-//           semaine.add(PopulatedCreneau(date, groupItem.key));
-//         }
-//       }
-//     }
-//     for (var m in tmp.values) {
-//       for (var l in m.values) {
-//         l.sort((a, b) => a.date.compareTo(b.date));
-//       }
-//     }
-//     return Map<Matiere, VueMatiere>.fromEntries(Matiere.values
-//         .map((e) => MapEntry(e, _semaineMapToList(tmp[e] ?? {}, []))));
-//   }
-
-//   /// [diagnostics] renvoie une liste de groupes posant problème.
-//   /// Un colloscope valide devrait renvoyer une liste vide.
-//   Map<GroupeID, Diagnostic> diagnostics() {
-//     final Map<GroupeID, Diagnostic> out = {};
-//     for (var item in _groupes.entries) {
-//       final group = item.key;
-//       if (group == NoGroup) {
-//         continue;
-//       }
-
-//       // collisions
-//       final parCreneau = <DateHeure, List<Matiere>>{};
-//       for (var mat in item.value.entries) {
-//         for (var date in mat.value) {
-//           final l = parCreneau.putIfAbsent(_publy(date), () => []);
-//           l.add(mat.key);
-//         }
-//       }
-//       final collisions =
-//           parCreneau.entries.where((element) => element.value.length > 1);
-
-//       // surchage : on calcule le nombre moyen de colles par semaine
-//       final parSemaine = _groupeSemaines(group);
-//       final nbColles = parSemaine.isEmpty
-//           ? 0
-//           : parSemaine
-//               .map((e) => e.length)
-//               .reduce((value, element) => value + element);
-//       final nbWeeks = parSemaine.length;
-//       final average = nbColles / nbWeeks;
-//       // plus de 1 d'écart -> surcharge
-//       final semainesChargees =
-//           List<int>.generate(parSemaine.length, (index) => index)
-//               .where((index) => parSemaine[index].length > average.ceil() + 1)
-//               .map((e) => e + premiereSemaine)
-//               .toList();
-
-//       if (collisions.isNotEmpty || semainesChargees.isNotEmpty) {
-//         out[group] =
-//             Diagnostic(Collisions.fromEntries(collisions), semainesChargees);
-//       }
-//     }
-//     return out;
-//   }
-
-//   /// [nbCreneauxVaccants] renvoie le nombre de créneaux définis mais non
-//   /// attribués à un groupe
-//   int nbCreneauxVaccants() {
-//     return (_groupes[NoGroup] ?? {})
-//         .values
-//         .map((l) => l.length)
-//         .reduce((value, element) => value + element);
-//   }
-
-//   void reset() {
-//     _groupes = {};
-//   }
-
-//   void addGroupe() {
-//     int serial = _groupes.length + 1;
-//     if (_groupes.containsKey(NoGroup)) {
-//       serial -= 1;
-//     }
-//     String id = "G$serial";
-//     while (_groupes.containsKey(id)) {
-//       serial += 1;
-//       id = "G$serial";
-//     }
-//     _groupes[id] = {};
-//   }
-
-//   /// removeGroupe supprime le groupe donné
-//   /// les créneaux liés ne sont pas supprimés
-//   void removeGroupe(GroupeID id) {
-//     final group = _groupes.remove(id);
-//     if (group == null) {
-//       return;
-//     }
-
-//     // ajoute les créneaux à NoGroup
-//     final nogroup = _groupes.putIfAbsent(NoGroup, () => {});
-//     for (var entry in group.entries) {
-//       final matiere = entry.key;
-//       final l = nogroup.putIfAbsent(matiere, () => []);
-//       l.addAll(entry.value);
-//     }
-//   }
-
-//   /// [addCreneaux] ajoute les heures données comme non
-//   /// affectées, dupliquant et adaptant la liste pour chaque semaine
-//   /// demandée
-//   void addCreneaux(
-//       Matiere mat, List<DateTime> semaineHours, List<int> semaines) {
-//     List<DateTime> finalTimes = [];
-//     for (var semaine in semaines) {
-//       final offset = Duration(days: 7 * (semaine - 1));
-//       final lundi = debut.add(offset);
-//       for (var time in semaineHours) {
-//         final dur = Duration(
-//             days: (time.weekday - 1), hours: time.hour, minutes: time.minute);
-//         finalTimes.add(lundi.add(dur));
-//       }
-//     }
-
-//     // add into NoGroup
-//     final l = _groupes.putIfAbsent(NoGroup, () => {});
-//     final lmat = l.putIfAbsent(mat, () => []);
-//     lmat.addAll(finalTimes);
-//   }
-
-//   /// removeCreneau supprime le creneau pour tous les groupes
-//   void removeCreneau(Matiere mat, DateTime creneau) {
-//     for (var groupe in _groupes.values) {
-//       final l = groupe[mat] ?? [];
-//       l.remove(creneau);
-//     }
-//   }
-
-//   /// attributeCreneau assigne le créneau [dst] au groupe [src],
-//   /// inversant les affectations précédentes
-//   void attributeCreneau(
-//       Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
-//     final srcGroup = _groupes.putIfAbsent(src.groupeID, () => {});
-//     final srcMatList = srcGroup.putIfAbsent(mat, () => []);
-//     if (!isEmptyDate(src.date)) {
-//       srcMatList.remove(src.date);
-//     }
-//     srcMatList.add(dst.date);
-
-//     // dst.groupID may be NoGroup
-//     final dstGroup = _groupes.putIfAbsent(dst.groupeID, () => {});
-//     final dstMatList = dstGroup.putIfAbsent(mat, () => []);
-//     dstMatList.remove(dst.date);
-//     if (!isEmptyDate(src.date)) {
-//       dstMatList.add(src.date);
-//     }
-//   }
-
-//   /// [clearCreneaux] enlève les groupes prévus pour la semaine [semaine]
-//   /// et matière [mat]
-//   void clearCreneaux(Matiere mat, int semaine) {
-//     final noGroup = _groupes.putIfAbsent(NoGroup, () => {});
-//     final noGroupMap = noGroup.putIfAbsent(mat, () => []);
-//     for (var groupe in _groupes.entries) {
-//       if (groupe.key == NoGroup) {
-//         continue;
-//       }
-//       final l = groupe.value[mat] ?? [];
-//       final toRemove = l.where((dt) => _week(dt) == semaine).toList();
-//       l.removeWhere((dt) => _week(dt) == semaine);
-//       noGroupMap.addAll(toRemove);
-//     }
-//   }
-
-//   /// [attribueRegulier] remplie les créneaux disponibles dans la matière [mat]
-//   /// en commençant par [premierGroupe] -> [premierCreneau]
-//   void attribueRegulier(
-//       Matiere mat, GroupeID premierGroupe, DateTime premierCreneau) {
-//     final nogroup = _groupes[NoGroup] ?? {};
-//     final disponibles = nogroup.putIfAbsent(mat, () => []);
-//     disponibles.sort();
-//     var currentIndex = disponibles.indexOf(premierCreneau);
-//     if (currentIndex == -1) {
-//       return;
-//     }
-
-//     final groupes =
-//         _groupes.keys.where((element) => element != NoGroup).toList();
-//     groupes.sort();
-
-//     var currentGroupeIndex = groupes.indexOf(premierGroupe);
-//     if (currentGroupeIndex == -1) {
-//       return;
-//     }
-
-//     // to simplify, build the list of available creaneaux, starting at currentIndex
-//     final ordered = [
-//       ...disponibles.sublist(currentIndex),
-//       ...disponibles.sublist(0, currentIndex)
-//     ];
-//     for (var creneau in ordered) {
-//       final currentGroupe = groupes[currentGroupeIndex % groupes.length];
-//       final gr = _groupes.putIfAbsent(currentGroupe, () => {});
-//       final matList = gr.putIfAbsent(mat, () => []);
-//       matList.add(creneau);
-
-//       currentGroupeIndex += 1; // iterate in parallel
-//     }
-
-//     // clear the NoGroup group
-//     disponibles.clear();
-//   }
-// }
-
-// /// [HeuresGroupe] donne les heures de colles d'un groupe,
-// /// pour toutes les matières
-// typedef HeuresGroupe = Map<Matiere, HeuresMatiereGroupe>;
-
-// extension HG on HeuresGroupe {
-//   Map<String, dynamic> toJson() {
-//     return map((key, value) => MapEntry(key.index.toString(), value.toJson()));
-//   }
-
-//   static HeuresGroupe fromJson(Map<String, dynamic> json) {
-//     return json.map((key, value) =>
-//         MapEntry(Matiere.values[int.parse(key)], HMG.fromJson(value)));
-//   }
-// }
-
-// class Colle {
-//   final DateTime date;
-//   final Matiere matiere;
-//   const Colle(this.date, this.matiere);
-// }
-
-// typedef VueGroupe = List<List<Colle>>; // semaines => colles
-
-// /// [HeuresMatiereGroupe] donne les jours (et heures) pour un groupe,
-// /// et une matière
-// typedef HeuresMatiereGroupe = List<DateTime>;
-
-// extension HMG on HeuresMatiereGroupe {
-//   List<String> toJson() {
-//     return map((e) => e.toIso8601String()).toList();
-//   }
-
-//   static HeuresMatiereGroupe fromJson(List<dynamic> json) {
-//     return json.map((e) => DateTime.parse(e)).toList();
-//   }
-// }
-
-// typedef VueSemaine = Map<Matiere, List<PopulatedCreneau>>;
-
-// typedef VueMatiere = List<List<PopulatedCreneau>>; // semaine -> colle
-
-// class PopulatedCreneau {
-//   final DateTime date;
-//   final GroupeID groupeID;
-
-//   /// may be NoGroup
-//   const PopulatedCreneau(this.date, this.groupeID);
-// }
-
-// List<T> _semaineMapToList<T>(Map<int, T> semaines, T empty) {
-//   if (semaines.isEmpty) {
-//     return List<T>.empty();
-//   }
-//   final L = semaines.keys.reduce(max) + 1;
-//   return List<T>.generate(L, (index) => semaines[index] ?? empty);
-// }
+  factory Groupe.fromJson(dynamic json) {
+    return Groupe(json as int);
+  }
+}
 
 /// [Colloscope] est la représentation en mémoire vive
 /// d'un colloscope.
 /// Il peut être enregistré (au format JSON), et affiché
 /// sous différente formes (par matière, par semaine, par élève)
 class Colloscope {
-  /// les groupes sont identifiés par leur index
-  Map<GroupeID, HeuresGroupe> _groupes;
+  final Map<Matiere, _Creneaux> _matieres;
+
+  final List<Groupe> groupes;
 
   /// [notes] est un champ de texte libre.
   String notes;
 
-  Colloscope(this._groupes, {this.notes = ""});
-
-  factory Colloscope.empty() {
-    return Colloscope({});
+  Colloscope(this._matieres, this.groupes, {this.notes = ""}) {
+    assert(_matieres.values.every(
+        (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
   }
 
   Map<String, dynamic> toJson() {
     return {
-      "groupes": _groupes.map((k, v) => MapEntry(k, v.toJson())),
+      "matieres": _matieres.map((k, v) =>
+          MapEntry(k.index.toString(), v.map((e) => e.toJson()).toList())),
+      "groupes": groupes.map((e) => e.toJson()).toList(),
       "notes": notes,
     };
   }
 
   factory Colloscope.fromJson(Map<String, dynamic> json) {
     return Colloscope(
-        (json["groupes"] as Map).map((k, v) => MapEntry(k, HG.fromJson(v))),
+        (json["matieres"] as Map).map((k, v) => MapEntry(
+              Matiere.values[int.parse(k as String)],
+              (v as List).map((cr) => _PopulatedCreneau.fromJson(cr)).toList(),
+            )),
+        ((json["groupes"] ?? []) as List)
+            .map((e) => Groupe.fromJson(e))
+            .toList(),
         notes: json["notes"] ?? "");
   }
 
@@ -476,7 +91,7 @@ class Colloscope {
     final file = await _saveFile;
     final ok = await file.exists();
     if (!ok) {
-      return Colloscope.empty();
+      return Colloscope({}, []);
     }
 
     // Read the file
@@ -488,16 +103,18 @@ class Colloscope {
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
   List<SemaineTo<VueSemaine>> parSemaine() {
+    final groupeMap = Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
     final semaines = <int, VueSemaine>{};
-    for (var groupeEntry in _groupes.entries) {
-      final groupe = groupeEntry.value;
-      for (var element in groupe.entries) {
-        final matiere = element.key;
-        for (var date in element.value) {
-          final semaine = semaines.putIfAbsent(date.semaine, () => {});
-          final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
-          groupesParMatiere.add(PopulatedCreneau(date, groupeEntry.key));
-        }
+    for (var item in _matieres.entries) {
+      final matiere = item.key;
+      for (var creneauIndex = 0;
+          creneauIndex < item.value.length;
+          creneauIndex++) {
+        final creneau = item.value[creneauIndex];
+        final semaine = semaines.putIfAbsent(creneau.date.semaine, () => {});
+        final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
+        groupesParMatiere.add(PopulatedCreneau(
+            creneauIndex, creneau.date, groupeMap[creneau.groupeID]));
       }
     }
     return _semaineMapToList(semaines);
@@ -505,11 +122,13 @@ class Colloscope {
 
   VueGroupe _groupeSemaines(GroupeID groupe) {
     final semaines = <int, List<Colle>>{};
-    for (var element in _groupes[groupe]!.entries) {
+    for (var element in _matieres.entries) {
       final matiere = element.key;
-      for (var date in element.value) {
-        final semaine = semaines.putIfAbsent(date.semaine, () => []);
-        semaine.add(Colle(date, matiere));
+      final creneauxGroupe =
+          element.value.where((element) => element.groupeID == groupe);
+      for (var cr in creneauxGroupe) {
+        final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
+        semaine.add(Colle(cr.date, matiere));
       }
     }
     for (var l in semaines.values) {
@@ -520,55 +139,48 @@ class Colloscope {
 
   /// les créneaux non attribués sont ignorés
   Map<GroupeID, VueGroupe> parGroupe() {
-    final out = _groupes.map((k, e) => MapEntry(k, _groupeSemaines(k)));
-    out.remove(NoGroup);
-    return out;
+    return Map.fromEntries(
+        groupes.map((k) => MapEntry(k.id, _groupeSemaines(k.id))));
   }
 
   Map<Matiere, VueMatiere> parMatiere() {
-    final tmp = <Matiere, Map<int, List<PopulatedCreneau>>>{};
-    for (var groupItem in _groupes.entries) {
-      for (var item in groupItem.value.entries) {
-        final matiere = item.key;
-        final semaines = tmp.putIfAbsent(matiere, () => {});
-        for (var date in item.value) {
-          final semaine = semaines.putIfAbsent(date.semaine, () => []);
-          semaine.add(PopulatedCreneau(date, groupItem.key));
-        }
+    final groupeMap = Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+
+    return _matieres.map((matiere, creneaux) {
+      final semaines = <int, List<PopulatedCreneau>>{};
+      for (var creneauIndex = 0;
+          creneauIndex < creneaux.length;
+          creneauIndex++) {
+        final creneau = creneaux[creneauIndex];
+        final semaine = semaines.putIfAbsent(creneau.date.semaine, () => []);
+        semaine.add(PopulatedCreneau(
+            creneauIndex, creneau.date, groupeMap[creneau.groupeID]));
       }
-    }
-    for (var m in tmp.values) {
-      for (var l in m.values) {
-        l.sort((a, b) => a.date.compareTo(b.date));
-      }
-    }
-    return Map<Matiere, VueMatiere>.fromEntries(Matiere.values
-        .map((e) => MapEntry(e, _semaineMapToList(tmp[e] ?? {}))));
+      // creneaux is already sorted
+      return MapEntry(matiere, _semaineMapToList(semaines));
+    });
   }
 
   /// [diagnostics] renvoie une liste de groupes posant problème.
   /// Un colloscope valide devrait renvoyer une liste vide.
   Map<GroupeID, Diagnostic> diagnostics() {
     final Map<GroupeID, Diagnostic> out = {};
-    for (var item in _groupes.entries) {
+    for (var item in parGroupe().entries) {
       final group = item.key;
-      if (group == NoGroup) {
-        continue;
-      }
+      final parSemaine = item.value;
 
       // collisions
       final parCreneau = <DateHeure, List<Matiere>>{};
-      for (var mat in item.value.entries) {
-        for (var horaire in mat.value) {
-          final l = parCreneau.putIfAbsent(horaire, () => []);
-          l.add(mat.key);
+      for (var crs in parSemaine) {
+        for (var cr in crs.item) {
+          final l = parCreneau.putIfAbsent(cr.date, () => []);
+          l.add(cr.matiere);
         }
       }
       final collisions =
           parCreneau.entries.where((element) => element.value.length > 1);
 
       // surchage : on calcule le nombre moyen de colles par semaine
-      final parSemaine = _groupeSemaines(group);
       final nbColles = parSemaine.isEmpty
           ? 0
           : parSemaine
@@ -593,43 +205,40 @@ class Colloscope {
   /// [nbCreneauxVaccants] renvoie le nombre de créneaux définis mais non
   /// attribués à un groupe
   int nbCreneauxVaccants() {
-    return (_groupes[NoGroup] ?? {})
-        .values
-        .map((l) => l.length)
+    return (_matieres.values
+            .map((l) => l.where((cr) => cr.groupeID == null).length))
         .reduce((value, element) => value + element);
   }
 
+  /// reset supprime complètement toutes les données.
   void reset() {
-    _groupes = {};
+    _matieres.clear();
+    groupes.clear();
+    notes = "";
   }
 
   void addGroupe() {
-    int serial = _groupes.length + 1;
-    if (_groupes.containsKey(NoGroup)) {
-      serial -= 1;
-    }
-    String id = "G$serial";
-    while (_groupes.containsKey(id)) {
+    int serial = groupes.length + 1;
+    while (groupes.indexWhere((g) => g.id == serial) != -1) {
       serial += 1;
-      id = "G$serial";
     }
-    _groupes[id] = {};
+    groupes.add(Groupe(serial));
   }
 
   /// removeGroupe supprime le groupe donné
-  /// les créneaux liés ne sont pas supprimés
+  /// les créneaux liés ne sont pas supprimés,
+  /// mais désaffectés
   void removeGroupe(GroupeID id) {
-    final group = _groupes.remove(id);
-    if (group == null) {
-      return;
-    }
+    groupes.removeWhere((gr) => gr.id == id);
 
-    // ajoute les créneaux à NoGroup
-    final nogroup = _groupes.putIfAbsent(NoGroup, () => {});
-    for (var entry in group.entries) {
-      final matiere = entry.key;
-      final l = nogroup.putIfAbsent(matiere, () => []);
-      l.addAll(entry.value);
+    // properly cleanup
+    for (var l in _matieres.values) {
+      for (var i = 0; i < l.length; i++) {
+        final cr = l[i];
+        if (cr.groupeID == id) {
+          l[i] = _PopulatedCreneau(cr.date, null);
+        }
+      }
     }
   }
 
@@ -638,106 +247,68 @@ class Colloscope {
   /// demandée
   void addCreneaux(
       Matiere mat, List<DateHeure> semaineHours, List<int> semaines) {
-    List<DateHeure> finalTimes = [];
+    List<_PopulatedCreneau> finalTimes = [];
     for (var semaine in semaines) {
       for (var time in semaineHours) {
         final adjusted =
             DateHeure(semaine, time.weekday, time.hour, time.minute);
-        finalTimes.add(adjusted);
+        finalTimes.add(_PopulatedCreneau(adjusted, null));
       }
     }
 
     // add into NoGroup
-    final l = _groupes.putIfAbsent(NoGroup, () => {});
-    final lmat = l.putIfAbsent(mat, () => []);
-    lmat.addAll(finalTimes);
+    final l = _matieres.putIfAbsent(mat, () => []);
+    l.addAll(finalTimes);
+    l.sort((a, b) =>
+        a.date.compareTo(b.date)); // make sure sort invariant is preserved
   }
 
   /// removeCreneau supprime le creneau pour tous les groupes
-  void removeCreneau(Matiere mat, DateHeure creneau) {
-    for (var groupe in _groupes.values) {
-      final l = groupe[mat] ?? [];
-      l.remove(creneau);
-    }
+  void removeCreneau(Matiere mat, int creneauIndex) {
+    final l = _matieres[mat] ?? [];
+    l.removeAt(creneauIndex);
   }
 
-  // /// attributeCreneau assigne le créneau [dst] au groupe [src],
-  // /// inversant les affectations précédentes
-  // void attributeCreneau(
-  //     Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
-  //   final srcGroup = _groupes.putIfAbsent(src.groupeID, () => {});
-  //   final srcMatList = srcGroup.putIfAbsent(mat, () => []);
-  //   if (!isEmptyDate(src.date)) {
-  //     srcMatList.remove(src.date);
-  //   }
-  //   srcMatList.add(dst.date);
-
-  //   // dst.groupID may be NoGroup
-  //   final dstGroup = _groupes.putIfAbsent(dst.groupeID, () => {});
-  //   final dstMatList = dstGroup.putIfAbsent(mat, () => []);
-  //   dstMatList.remove(dst.date);
-  //   if (!isEmptyDate(src.date)) {
-  //     dstMatList.add(src.date);
-  //   }
-  // }
-
-  // /// [clearCreneaux] enlève les groupes prévus pour la semaine [semaine]
-  // /// et matière [mat]
-  // void clearCreneaux(Matiere mat, int semaine) {
-  //   final noGroup = _groupes.putIfAbsent(NoGroup, () => {});
-  //   final noGroupMap = noGroup.putIfAbsent(mat, () => []);
-  //   for (var groupe in _groupes.entries) {
-  //     if (groupe.key == NoGroup) {
-  //       continue;
-  //     }
-  //     final l = groupe.value[mat] ?? [];
-  //     final toRemove = l.where((dt) => _week(dt) == semaine).toList();
-  //     l.removeWhere((dt) => _week(dt) == semaine);
-  //     noGroupMap.addAll(toRemove);
-  //   }
-  // }
-
-  /// [attribueRegulier] remplie les créneaux disponibles dans la matière [mat]
-  /// en commençant par [premierGroupe] -> [premierCreneau]
-  void attribueRegulier(
-      Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau) {
-    final nogroup = _groupes[NoGroup] ?? {};
-    final disponibles = nogroup.putIfAbsent(mat, () => []);
-    disponibles.sort();
-    var currentIndex = disponibles.indexOf(premierCreneau);
-    if (currentIndex == -1) {
-      return;
-    }
-
-    final groupes =
-        _groupes.keys.where((element) => element != NoGroup).toList();
-    groupes.sort();
-
-    var currentGroupeIndex = groupes.indexOf(premierGroupe);
-    if (currentGroupeIndex == -1) {
-      return;
-    }
-
-    // to simplify, build the list of available creaneaux, starting at currentIndex
-    final ordered = [
-      ...disponibles.sublist(currentIndex),
-      ...disponibles.sublist(0, currentIndex)
-    ];
-    for (var creneau in ordered) {
-      final currentGroupe = groupes[currentGroupeIndex % groupes.length];
-      final gr = _groupes.putIfAbsent(currentGroupe, () => {});
-      final matList = gr.putIfAbsent(mat, () => []);
-      matList.add(creneau);
-
-      currentGroupeIndex += 1; // iterate in parallel
-    }
-
-    // clear the NoGroup group
-    disponibles.clear();
+  /// toogleCreneau change l'état du créneau donné
+  void toogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
+    final l = _matieres[mat] ?? [];
+    final cr = l[creneauIndex];
+    l[creneauIndex] =
+        _PopulatedCreneau(cr.date, cr.groupeID == null ? groupe : null);
   }
+
+  void attribueCyclique(List<GroupeID> groupes, List<int> semaines) {}
+
+  // /// [attribueRegulier] remplie les créneaux disponibles dans la matière [mat]
+  // /// en commençant par [premierGroupe] -> [premierCreneauIndex]
+  // /// les créneaux déjà attribués sont ignorés
+  // void attribueRegulier(
+  //     Matiere mat, GroupeID premierGroupe, int premierCreneauIndex) {
+  //   // to simplify, build the list of available creaneaux, starting at premierCreneauIndex
+  //   final ordered = [
+  //     ...(_matieres[mat] ?? []).sublist(premierCreneauIndex),
+  //     ...(_matieres[mat] ?? []).sublist(0, premierCreneauIndex)
+  //   ];
+  //   final disponibles = ordered.where((cr) => cr.groupeID == null).toList();
+
+  //   var currentGroupeIndex = groupes.indexWhere((gr) => gr.id == premierGroupe);
+  //   if (currentGroupeIndex == -1) {
+  //     return;
+  //   }
+
+  //   for (var creneau in disponibles) {
+  //     final currentGroupe = groupes[currentGroupeIndex % groupes.length];
+  //     final gr = _groupes.putIfAbsent(currentGroupe, () => {});
+  //     final matList = gr.putIfAbsent(mat, () => []);
+  //     matList.add(creneau);
+
+  //     currentGroupeIndex += 1; // iterate in parallel
+  //   }
+
+  //   // clear the NoGroup group
+  //   disponibles.clear();
+  // }
 }
-
-typedef GroupeID = String;
 
 enum Matiere {
   maths,
@@ -786,15 +357,40 @@ extension HMG on HeuresMatiereGroupe {
 }
 
 typedef VueSemaine = Map<Matiere, List<PopulatedCreneau>>;
-typedef VueMatiere
-    = List<SemaineTo<List<PopulatedCreneau>>>; // semaine -> colle
+
+/// les créneaux sont triés par date, et peuvent
+/// etre identifiés par index pour gérer les doublons
+typedef _Creneaux = List<_PopulatedCreneau>;
+
+typedef VueMatiere = List<SemaineTo<List<PopulatedCreneau>>>;
+
+class _PopulatedCreneau {
+  final DateHeure date;
+  final GroupeID? groupeID;
+
+  const _PopulatedCreneau(this.date, this.groupeID);
+
+  Map<String, dynamic> toJson() {
+    return {
+      "date": date.toJson(),
+      "groupeID": groupeID,
+    };
+  }
+
+  factory _PopulatedCreneau.fromJson(Map<String, dynamic> json) {
+    return _PopulatedCreneau(
+        DateHeure.fromJson(json["date"]), json["groupeID"]);
+  }
+}
 
 class PopulatedCreneau {
+  /// [index] est l'identifiant unique d'un créneau dans la
+  /// liste définie par une matière
+  final int index;
   final DateHeure date;
-  final GroupeID groupeID;
+  final Groupe? groupe;
 
-  /// may be NoGroup
-  const PopulatedCreneau(this.date, this.groupeID);
+  const PopulatedCreneau(this.index, this.date, this.groupe);
 }
 
 class SemaineTo<T> {

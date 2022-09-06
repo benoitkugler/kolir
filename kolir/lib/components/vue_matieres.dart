@@ -10,7 +10,7 @@ class VueMatiereW extends StatelessWidget {
 
   final void Function(Matiere mat, List<DateHeure> hours, List<int> semaines)
       onAdd;
-  final void Function(Matiere mat, DateHeure creneau) onDelete;
+  final void Function(Matiere mat, int creneauIndex) onDelete;
 
   const VueMatiereW(this.matieres, this.onAdd, this.onDelete, {super.key});
 
@@ -31,7 +31,7 @@ class VueMatiereW extends StatelessWidget {
                       h,
                       s,
                     ),
-                (dt) => onDelete(e.key, dt)))
+                (index) => onDelete(e.key, index)))
             .toList(),
       )),
     );
@@ -42,7 +42,7 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
   final void Function(List<DateHeure> hours, List<int> semaines) onAdd;
-  final void Function(DateHeure creneau) onDelete;
+  final void Function(int creneauIndex) onDelete;
 
   const _MatiereW(this.matiere, this.semaines, this.onAdd, this.onDelete,
       {super.key});
@@ -76,19 +76,21 @@ class _MatiereW extends StatelessWidget {
                     style: const TextStyle(fontSize: 18)),
               ),
               Expanded(
-                child: SemaineList(semaines
-                    .map((creneaux) => SemaineTo(
-                        creneaux.semaine,
-                        Wrap(
-                          children: creneaux.item
-                              .map((e) => ColleW(
-                                    Colle(e.date, matiere),
-                                    showMatiere: false,
-                                    onDelete: () => onDelete(e.date),
-                                  ))
-                              .toList(),
-                        )))
-                    .toList()),
+                child: SemaineList(
+                    semaines
+                        .map((creneaux) => SemaineTo(
+                            creneaux.semaine,
+                            Wrap(
+                              children: creneaux.item
+                                  .map((e) => ColleW(
+                                        Colle(e.date, matiere),
+                                        showMatiere: false,
+                                        onDelete: () => onDelete(e.index),
+                                      ))
+                                  .toList(),
+                            )))
+                        .toList(),
+                    "Aucun créneau n'est encore défini."),
               ),
               ElevatedButton(
                   onPressed: () => showAddCreneaux(context),

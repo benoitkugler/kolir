@@ -6,44 +6,9 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
-import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
-const l1 = [
-  DateHeure(1, 3, 6, 0),
-  DateHeure(1, 3, 13, 0),
-  DateHeure(1, 3, 20, 0)
-];
-const l2 = [
-  DateHeure(1, 3, 7, 0),
-  DateHeure(1, 3, 14, 0),
-  DateHeure(2, 3, 21, 0)
-];
-
-final sample = Colloscope({
-  "G1": {
-    Matiere.maths: l1,
-    Matiere.esh: l1,
-    Matiere.espagnol: l1,
-    Matiere.allemand: l1,
-    Matiere.anglais: l1,
-    Matiere.philo: l1,
-    Matiere.francais: l1,
-  },
-  "G2": {
-    Matiere.maths: l2,
-    Matiere.esh: l2,
-    Matiere.espagnol: l2,
-    Matiere.allemand: l2,
-    Matiere.anglais: l2,
-    Matiere.philo: l2,
-    Matiere.francais: l2,
-  },
-  "G3": {
-    Matiere.maths: l1,
-    Matiere.allemand: l1,
-  }
-});
+final sample = Colloscope({}, const [Groupe(1), Groupe(2), Groupe(3)]);
 
 void main() {
   test("Colloscope JSON", () {
@@ -56,7 +21,7 @@ void main() {
 
   test("Par semaine", () {
     final parSemaine = sample.parSemaine();
-    expect(parSemaine.length, equals(2));
+    expect(parSemaine.length, equals(0));
   });
 
   test("Export matieres", () async {

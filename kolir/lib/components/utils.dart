@@ -123,15 +123,28 @@ class _ViewChip extends StatelessWidget {
 
 class SemaineList extends StatelessWidget {
   final List<SemaineTo<Widget>> semaines;
-
-  const SemaineList(this.semaines, {super.key});
+  final String noDataText;
+  const SemaineList(this.semaines, this.noDataText, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: semaines.map((s) => _SemaineRow(s.semaine, s.item)).toList(),
+      crossAxisAlignment: semaines.isEmpty
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
+      children: semaines.isEmpty
+          ? [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  noDataText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontStyle: FontStyle.italic),
+                ),
+              )
+            ]
+          : semaines.map((s) => _SemaineRow(s.semaine, s.item)).toList(),
     );
   }
 }

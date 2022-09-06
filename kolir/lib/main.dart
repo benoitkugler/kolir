@@ -38,7 +38,7 @@ class _Home extends StatefulWidget {
 }
 
 class _HomeState extends State<_Home> {
-  Colloscope col = Colloscope.empty();
+  Colloscope col = Colloscope({}, []);
   var mode = ModeView.matieres;
   final notesController = TextEditingController();
 
@@ -58,7 +58,7 @@ class _HomeState extends State<_Home> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Erreur pendant le chargement"),
           backgroundColor: Colors.orange));
-      col = Colloscope.empty();
+      col = Colloscope({}, []);
     }
     setState(() {
       this.col = col;
@@ -90,39 +90,23 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void removeCreneau(Matiere mat, DateHeure creneau) {
+  void removeCreneau(Matiere mat, int creneauIndex) {
     setState(() {
-      col.removeCreneau(mat, creneau);
+      col.removeCreneau(mat, creneauIndex);
       isDirty = true;
     });
   }
 
-  Creneaux attributeCreneau(
-      Matiere mat, PopulatedCreneau src, PopulatedCreneau dst) {
+  void onToogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
     setState(() {
-      // TODO:
-      // col.attributeCreneau(mat, src, dst);
+      col.toogleCreneau(groupe, mat, creneauIndex);
       isDirty = true;
     });
-    return col.parMatiere();
   }
 
-  Creneaux clearCreneaux(Matiere mat, int semaine) {
-    setState(() {
-      // TODO:
-      // col.clearCreneaux(mat, semaine);
-      isDirty = true;
-    });
-    return col.parMatiere();
-  }
-
-  Creneaux attribueRegulier(
+  void attribueRegulier(
       Matiere mat, GroupeID premierGroupe, DateHeure premierCreneau) {
-    setState(() {
-      col.attribueRegulier(mat, premierGroupe, premierCreneau);
-      isDirty = true;
-    });
-    return col.parMatiere();
+    // TODO
   }
 
   void _export() async {
@@ -148,13 +132,13 @@ class _HomeState extends State<_Home> {
         return VueSemaineW(col.nbCreneauxVaccants(), col.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
+          col.groupes,
           col.parGroupe(),
           col.diagnostics(),
           col.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
-          onAttributeCreneau: attributeCreneau,
-          onClearCreneaux: clearCreneaux,
+          onToogleCreneau: onToogleCreneau,
           onAttribueRegulier: attribueRegulier,
         );
       case ModeView.matieres:
