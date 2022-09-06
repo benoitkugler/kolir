@@ -146,7 +146,8 @@ class _HomeState extends State<_Home> {
   void _export() async {
     final matieres = matieresToHTML(currentColloscope);
     final groupes = groupesToHTML(currentColloscope);
-    final semaines = semainesToHTML(currentColloscope, matieresColors);
+    final semaines = semainesToHTML(currentColloscope,
+        currentColloscope.matieresList.values.map((m) => m.color).toList());
 
     final matieresPath =
         await saveDocument(matieres, "colloscope_matieres.html");
@@ -163,10 +164,13 @@ class _HomeState extends State<_Home> {
   Widget get body {
     switch (mode) {
       case ModeView.semaines:
-        return VueSemaineW(currentColloscope.nbCreneauxVaccants(),
+        return VueSemaineW(
+            currentColloscope.matieresList,
+            currentColloscope.nbCreneauxVaccants(),
             currentColloscope.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
+          currentColloscope.matieresList,
           currentColloscope.groupes,
           currentColloscope.parGroupe(),
           currentColloscope.diagnostics(),
@@ -177,8 +181,12 @@ class _HomeState extends State<_Home> {
           onAttribueCreneaux: attribueCreneaux,
         );
       case ModeView.matieres:
-        return VueMatiereW(currentColloscope.creneauxHoraires,
-            currentColloscope.parMatiere(), addCreneaux, removeCreneau);
+        return VueMatiereW(
+            currentColloscope.matieresList,
+            currentColloscope.creneauxHoraires,
+            currentColloscope.parMatiere(),
+            addCreneaux,
+            removeCreneau);
     }
   }
 

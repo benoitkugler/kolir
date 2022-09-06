@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/colloscope.dart';
-import 'package:kolir/logic/utils.dart';
+import 'package:kolir/logic/settings.dart';
 
 typedef Creneaux = Map<Matiere, VueMatiere>;
 
 final colorWarning = Colors.deepOrange.shade300;
 
 class VueGroupeW extends StatefulWidget {
+  final MatiereProvider matieresList;
   final List<Groupe> groupes;
   final Map<GroupeID, VueGroupe> colles;
   final Map<GroupeID, Diagnostic> diagnostics;
@@ -21,7 +22,8 @@ class VueGroupeW extends StatefulWidget {
   final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribueCreneaux;
 
-  const VueGroupeW(this.groupes, this.colles, this.diagnostics, this.creneaux,
+  const VueGroupeW(this.matieresList, this.groupes, this.colles,
+      this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
       required this.onToogleCreneau,
@@ -76,6 +78,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                   shrinkWrap: true,
                   children: widget.groupes
                       .map((gr) => _GroupeW(
+                            widget.matieresList,
                             gr,
                             widget.colles[gr.id] ?? [],
                             widget.creneaux,
@@ -89,8 +92,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
               ),
             ],
           ),
-          secondChild: _Assistant(
-              widget.groupes, widget.creneaux, widget.onAttribueCreneaux),
+          secondChild: _Assistant(widget.matieresList, widget.groupes,
+              widget.creneaux, widget.onAttribueCreneaux),
         ),
       ),
     );
@@ -118,6 +121,7 @@ class _DiagnosticAlert extends StatelessWidget {
 }
 
 class _GroupeW extends StatefulWidget {
+  final MatiereProvider matieresList;
   final Groupe groupe;
   final VueGroupe semaines;
   final Creneaux creneaux;
@@ -126,8 +130,8 @@ class _GroupeW extends StatefulWidget {
   final void Function() onRemove;
   final void Function(Matiere mat, int creneauIndex) onToogleCreneau;
 
-  const _GroupeW(this.groupe, this.semaines, this.creneaux, this.diagnostic,
-      this.onRemove, this.onToogleCreneau,
+  const _GroupeW(this.matieresList, this.groupe, this.semaines, this.creneaux,
+      this.diagnostic, this.onRemove, this.onToogleCreneau,
       {super.key});
 
   @override
@@ -183,6 +187,7 @@ class _GroupeWState extends State<_GroupeW> {
                       : CrossFadeState.showFirst,
                   firstChild: _GroupStaticW(widget.semaines),
                   secondChild: _GroupEditW(
+                    widget.matieresList,
                     widget.groupe.id,
                     widget.creneaux,
                     widget.onToogleCreneau,
@@ -219,20 +224,23 @@ class _GroupStaticW extends StatelessWidget {
 }
 
 class _GroupEditW extends StatelessWidget {
+  final MatiereProvider matieresList;
   final GroupeID groupe;
   final Creneaux creneaux;
 
   final void Function(Matiere mat, int creneauIndex) onToogleCreneau;
 
-  const _GroupEditW(this.groupe, this.creneaux, this.onToogleCreneau,
+  const _GroupEditW(
+      this.matieresList, this.groupe, this.creneaux, this.onToogleCreneau,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
     return MatieresTabs(
+      matieresList,
       (mat) => _GroupEditMatiere(
         groupe,
-        mat,
+        matieresList.values[mat],
         creneaux[mat] ?? [],
         (creneauIndex) => onToogleCreneau(mat, creneauIndex),
       ),
@@ -242,7 +250,7 @@ class _GroupEditW extends StatelessWidget {
 
 class _GroupEditMatiere extends StatelessWidget {
   final GroupeID groupeID;
-  final Matiere matiere;
+  final MatiereData matiere;
   final VueMatiere creneaux;
 
   final void Function(int creneauIndex) onToogleCreneau;
@@ -320,7 +328,7 @@ class _DiagnosticW extends StatelessWidget {
                 .map((item) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2.0),
                       child: Text(
-                          "S${item.key.semaine} ${item.key.formatDateHeure()} (${item.value.map((m) => formatMatiere(m, dense: true)).join(' et ')})"),
+                          "S${item.key.semaine} ${item.key.formatDateHeure()} (${item.value.map((m) => m.format(dense: true)).join(' et ')})"),
                     ))
                 .toList(),
             if (diagnostic.semainesChargees.isNotEmpty)
@@ -341,27 +349,32 @@ class _DiagnosticW extends StatelessWidget {
 
 // permet d'attribuer plusieurs créneaux d'un coup
 class _Assistant extends StatelessWidget {
+  final MatiereProvider matieresList;
   final List<Groupe> groupes;
   final Map<Matiere, VueMatiere> creneaux;
 
   final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribue;
 
-  const _Assistant(this.groupes, this.creneaux, this.onAttribue, {super.key});
+  const _Assistant(
+      this.matieresList, this.groupes, this.creneaux, this.onAttribue,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MatieresTabs((mat) => _AssistantMatiere(
-          mat,
-          groupes,
-          creneaux[mat] ?? [],
-          (groupes, semaines, p) => onAttribue(mat, groupes, semaines, p),
-        ));
+    return MatieresTabs(
+        matieresList,
+        (mat) => _AssistantMatiere(
+              matieresList.values[mat],
+              groupes,
+              creneaux[mat] ?? [],
+              (groupes, semaines, p) => onAttribue(mat, groupes, semaines, p),
+            ));
   }
 }
 
 class _AssistantMatiere extends StatefulWidget {
-  final Matiere matiere;
+  final MatiereData matiere;
   final List<Groupe> groupes;
   final VueMatiere creneaux;
 
@@ -500,7 +513,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
 class _AssistantMatiereCreneaux extends StatelessWidget {
   final Set<int> selectedSemaines;
 
-  final Matiere matiere;
+  final MatiereData matiere;
   final VueMatiere semaines;
 
   final void Function(int semaine, bool selected) onSelectSemaine;

@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/export/utils.dart';
-import 'package:kolir/logic/utils.dart';
 
 /// [semainesToHTML] imprime le programme de colle,
 /// résumé sur un seul tableau.
@@ -11,8 +10,8 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
 
   List<String> rows = [];
   for (var semaine in semaines) {
-    final matieres = Matiere.values.map((mat) {
-      final colles = semaine.item[mat] ?? [];
+    final matieres = col.matieresList.values.map((mat) {
+      final colles = semaine.item[mat.index] ?? [];
       final creneaux = colles.map((e) =>
           "<div class='chip matiere-${mat.index}'><i>${e.groupe ?? ''}</i> ${e.date.formatDateHeure(dense: true)}</div>");
       return "<td style='text-align: center'>${creneaux.join('')}</td>";
@@ -28,7 +27,7 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
   }
 
   final matiereHeaders =
-      Matiere.values.map((e) => "<th>${formatMatiere(e, dense: true)}</th>");
+      col.matieresList.values.map((e) => "<th>${e.format(dense: true)}</th>");
   final page = """
     <h1>Colloscope</h1>
 

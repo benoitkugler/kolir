@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
 
 class CreneauHoraireData {
   final int hour;
@@ -74,4 +77,86 @@ const defautHoraires = CreneauHoraireProvider([
   CreneauHoraireData(15, 30),
   CreneauHoraireData(16, 30),
   CreneauHoraireData(17, 30),
+]);
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+
+typedef MatiereID = int;
+
+class MatiereData {
+  /// [index] is the id of the enum value.
+  final MatiereID index;
+  final String name;
+  final String shortName;
+  final Color color;
+  const MatiereData(this.index, this.name, this.shortName, this.color);
+
+  String format({bool dense = false}) {
+    return dense ? shortName : name;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "index": index,
+      "name": name,
+      "shortName": shortName,
+      "color": color.value,
+    };
+  }
+
+  factory MatiereData.fromJson(Map<String, dynamic> json) {
+    return MatiereData(
+      json["index"],
+      json["name"],
+      json["shortName"],
+      Color(json["color"] as int),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is MatiereData &&
+      other.runtimeType == runtimeType &&
+      other.index == index &&
+      other.name == name &&
+      other.shortName == shortName &&
+      other.color.value == color.value;
+
+  @override
+  int get hashCode =>
+      index.hashCode + name.hashCode + shortName.hashCode + color.hashCode;
+}
+
+class MatiereProvider {
+  final List<MatiereData> values;
+  const MatiereProvider(this.values);
+
+  List<dynamic> toJson() {
+    return values.map((e) => e.toJson()).toList();
+  }
+
+  factory MatiereProvider.fromJson(dynamic json) {
+    return MatiereProvider(
+        (json as List).map((e) => MatiereData.fromJson(e)).toList());
+  }
+
+  MatiereProvider copy() {
+    return MatiereProvider(values.map((e) => e).toList());
+  }
+
+  bool equals(MatiereProvider other) {
+    return values.equals(other.values);
+  }
+}
+
+const defautMatieres = MatiereProvider([
+  MatiereData(0, "Mathématiques", "Maths.", Color(0xFF90CAF9)),
+  MatiereData(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7)),
+  MatiereData(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
+  MatiereData(3, "Allemand", "Allem.", Color(0xFFFFF176)),
+  MatiereData(4, "Espagnol", "Espa.", Color(0xFFF06292)),
+  MatiereData(5, "Francais", "Fran.", Color(0xFFBA68C8)),
+  MatiereData(6, "Philosophie", "Philo.", Color(0xFF4DB6AC)),
 ]);

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:kolir/logic/colloscope.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -86,10 +85,8 @@ String _colorToHTML(Color color) {
 /// [colors] is the list of the colors class for each matieres
 /// with name matiere-<index>
 String cssMatieresColorDefinition(List<Color> colors) {
-  assert(colors.length == Matiere.values.length);
-
   final classes = List<String>.generate(
-      Matiere.values.length,
+      colors.length,
       (index) =>
           ".matiere-$index { background-color: ${_colorToHTML(colors[index])}; }");
   return classes.join("\n");

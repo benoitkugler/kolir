@@ -1,5 +1,3 @@
-import 'package:kolir/logic/colloscope.dart';
-
 const _days = [
   "",
   "Lun",
@@ -17,43 +15,6 @@ String formatWeekday(int weekday) {
 
 String _formatHeure(int hour, int minute) {
   return "${hour}h${minute.toString().padLeft(2, "0")}";
-}
-
-String formatMatiere(Matiere mat, {dense = false}) {
-  switch (mat) {
-    case Matiere.maths:
-      if (dense) {
-        return "Maths.";
-      }
-      return "Mathématiques";
-    case Matiere.esh:
-      if (dense) {
-        return "ESH";
-      }
-      return "Economie, Sociologie, Histoire";
-    case Matiere.anglais:
-      return "Anglais";
-    case Matiere.allemand:
-      if (dense) {
-        return "Allem.";
-      }
-      return "Allemand";
-    case Matiere.espagnol:
-      if (dense) {
-        return "Espa.";
-      }
-      return "Espagnol";
-    case Matiere.francais:
-      if (dense) {
-        return "Fran.";
-      }
-      return "Francais";
-    case Matiere.philo:
-      if (dense) {
-        return "Philo.";
-      }
-      return "Philosophie";
-  }
 }
 
 DateHeure emptyDate() {

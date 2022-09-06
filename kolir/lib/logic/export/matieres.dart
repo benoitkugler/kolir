@@ -1,6 +1,5 @@
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/export/utils.dart';
-import 'package:kolir/logic/utils.dart';
 
 /// [matieresToHTML] imprime le programme de colle,
 /// une page par matière
@@ -9,7 +8,7 @@ String matieresToHTML(Colloscope col) {
 
   final List<String> pages = [];
   for (var item in matieres.entries) {
-    final matiere = item.key;
+    final matiere = col.matieresList.values[item.key];
 
     final rows = item.value.map((semaine) {
       final creneaux = semaine.item.map((e) =>
@@ -23,7 +22,7 @@ String matieresToHTML(Colloscope col) {
     });
 
     final page = """
-    <h1>${formatMatiere(matiere)}</h1>
+    <h1>${matiere.format()}</h1>
 
     <table>
       <tr>

@@ -7,7 +7,7 @@ import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-typedef Collisions = Map<DateHeure, List<Matiere>>;
+typedef Collisions = Map<DateHeure, List<MatiereData>>;
 
 /// [Diagnostic] indique les problèmes de la répartition courante,
 /// pour un groupe.
@@ -68,14 +68,25 @@ class Colloscope {
   final List<Groupe> groupes;
 
   CreneauHoraireProvider creneauxHoraires;
+  MatiereProvider matieresList;
 
   /// [notes] est un champ de texte libre.
   String notes;
 
   Colloscope(this._matieres, this.groupes,
-      {this.notes = "", this.creneauxHoraires = defautHoraires}) {
+      {this.notes = "",
+      this.creneauxHoraires = defautHoraires,
+      this.matieresList = defautMatieres}) {
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
+
+    final gm = _groupeMap;
+    assert(_matieres.values.every((l) =>
+        l.every((cr) => cr.groupeID == null || gm.containsKey(cr.groupeID))));
+
+    assert(List.generate(matieresList.values.length,
+        (index) => index == matieresList.values[index].index).every((e) => e));
+    // TODO: assert ID
   }
 
   Colloscope copy() {
@@ -83,6 +94,7 @@ class Colloscope {
       _matieres.map((k, v) => MapEntry(k, v.map((e) => e.copy()).toList())),
       groupes.map((e) => e).toList(),
       creneauxHoraires: creneauxHoraires.copy(),
+      matieresList: matieresList.copy(),
       notes: notes,
     );
   }
@@ -91,14 +103,16 @@ class Colloscope {
       areMatieresEqual(other._matieres, _matieres) &&
       other.groupes.equals(groupes) &&
       other.creneauxHoraires.equals(creneauxHoraires) &&
+      other.matieresList.equals(matieresList) &&
       other.notes == notes;
 
   Map<String, dynamic> toJson() {
     return {
-      "matieres": _matieres.map((k, v) =>
-          MapEntry(k.index.toString(), v.map((e) => e.toJson()).toList())),
+      "matieres": _matieres.map(
+          (k, v) => MapEntry(k.toString(), v.map((e) => e.toJson()).toList())),
       "groupes": groupes.map((e) => e.toJson()).toList(),
       "creneauxHoraires": creneauxHoraires.toJson(),
+      "matieresList": matieresList.toJson(),
       "notes": notes,
     };
   }
@@ -106,7 +120,7 @@ class Colloscope {
   factory Colloscope.fromJson(Map<String, dynamic> json) {
     return Colloscope(
         (json["matieres"] as Map).map((k, v) => MapEntry(
-              Matiere.values[int.parse(k as String)],
+              int.parse(k as String),
               (v as List).map((cr) => _PopulatedCreneau.fromJson(cr)).toList(),
             )),
         ((json["groupes"] ?? []) as List)
@@ -115,6 +129,9 @@ class Colloscope {
         creneauxHoraires: json["creneauxHoraires"] == null
             ? defautHoraires
             : CreneauHoraireProvider.fromJson(json["creneauxHoraires"]),
+        matieresList: json["matieresList"] == null
+            ? defautMatieres
+            : MatiereProvider.fromJson(json["matieresList"]),
         notes: json["notes"] ?? "");
   }
 
@@ -144,11 +161,13 @@ class Colloscope {
     return Colloscope.fromJson(jsonDecode(contents));
   }
 
+  Map get _groupeMap => Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
   List<SemaineTo<VueSemaine>> parSemaine() {
-    final groupeMap = Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
-    final semaines = <int, VueSemaine>{};
+    final groupeMap = _groupeMap;
+    final semaines = <int, Map<MatiereID, List<PopulatedCreneau>>>{};
     for (var item in _matieres.entries) {
       final matiere = item.key;
       for (var creneauIndex = 0;
@@ -172,7 +191,7 @@ class Colloscope {
           element.value.where((element) => element.groupeID == groupe);
       for (var cr in creneauxGroupe) {
         final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
-        semaine.add(Colle(cr.date, matiere));
+        semaine.add(Colle(cr.date, matieresList.values[matiere]));
       }
     }
     for (var l in semaines.values) {
@@ -214,7 +233,7 @@ class Colloscope {
       final parSemaine = item.value;
 
       // collisions
-      final parCreneau = <DateHeure, List<Matiere>>{};
+      final parCreneau = <DateHeure, List<MatiereData>>{};
       for (var crs in parSemaine) {
         for (var cr in crs.item) {
           final l = parCreneau.putIfAbsent(cr.date, () => []);
@@ -349,21 +368,19 @@ class Colloscope {
   }
 }
 
-enum Matiere {
-  maths,
-  esh, // Eco
-  anglais,
-  allemand,
-  espagnol,
-  francais,
-  philo;
-}
+typedef Matiere = MatiereID;
 
 // ---------------------------------------------------------
 
+class Pair<K, V> {
+  final K k;
+  final V v;
+  const Pair(this.k, this.v);
+}
+
 class Colle {
   final DateHeure date;
-  final Matiere matiere;
+  final MatiereData matiere;
   const Colle(this.date, this.matiere);
 }
 

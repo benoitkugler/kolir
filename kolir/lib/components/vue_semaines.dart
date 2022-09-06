@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/colloscope.dart';
-import 'package:kolir/logic/utils.dart';
+import 'package:kolir/logic/settings.dart';
 
 class VueSemaineW extends StatelessWidget {
+  final MatiereProvider matieresList;
   final int creneauxVaccants;
   final List<SemaineTo<VueSemaine>> semaines;
 
-  const VueSemaineW(this.creneauxVaccants, this.semaines, {super.key});
+  const VueSemaineW(this.matieresList, this.creneauxVaccants, this.semaines,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,8 @@ class VueSemaineW extends StatelessWidget {
           child: SingleChildScrollView(
             child: SemaineList(
               semaines
-                  .map((e) => SemaineTo(e.semaine, _SemaineBody(e.item)))
+                  .map((e) =>
+                      SemaineTo(e.semaine, _SemaineBody(matieresList, e.item)))
                   .toList(),
               "Aucune colle n'est prévue.",
             ),
@@ -41,8 +44,10 @@ class VueSemaineW extends StatelessWidget {
 }
 
 class _SemaineBody extends StatelessWidget {
+  final MatiereProvider matieresList;
   final VueSemaine semaine;
-  const _SemaineBody(this.semaine, {super.key});
+
+  const _SemaineBody(this.matieresList, this.semaine, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +55,9 @@ class _SemaineBody extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: Matiere.values
+        children: matieresList.values
             .map((matiere) => Column(
-                children: (semaine[matiere] ?? [])
+                children: (semaine[matiere.index] ?? [])
                     .map((creneau) => _Group(matiere, creneau))
                     .toList()))
             .toList(),
@@ -62,7 +67,7 @@ class _SemaineBody extends StatelessWidget {
 }
 
 class _Group extends StatelessWidget {
-  final Matiere matiere;
+  final MatiereData matiere;
   final PopulatedCreneau creneau;
 
   const _Group(this.matiere, this.creneau, {super.key});
@@ -71,7 +76,7 @@ class _Group extends StatelessWidget {
   Widget build(BuildContext context) {
     final group = creneau.groupe?.name ?? "?";
     return Tooltip(
-      message: formatMatiere(matiere),
+      message: matiere.format(),
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Container(

@@ -7,19 +7,22 @@ import 'package:kolir/logic/settings.dart';
 import '../logic/utils.dart';
 
 class VueMatiereW extends StatelessWidget {
+  final MatiereProvider matieresList;
   final CreneauHoraireProvider horaires;
-  final Map<Matiere, VueMatiere> matieres;
+
+  final Map<Matiere, VueMatiere> byMatieres;
 
   final void Function(Matiere mat, List<DateHeure> hours, List<int> semaines)
       onAdd;
   final void Function(Matiere mat, int creneauIndex) onDelete;
 
-  const VueMatiereW(this.horaires, this.matieres, this.onAdd, this.onDelete,
+  const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
+      this.onAdd, this.onDelete,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final entries = matieres.entries.toList();
+    final entries = byMatieres.entries.toList();
     return VueSkeleton(
       mode: ModeView.matieres,
       actions: const [],
@@ -28,7 +31,7 @@ class VueMatiereW extends StatelessWidget {
         children: entries
             .map((e) => _MatiereW(
                 horaires,
-                e.key,
+                matieresList.values[e.key],
                 e.value,
                 (h, s) => onAdd(
                       e.key,
@@ -45,7 +48,7 @@ class VueMatiereW extends StatelessWidget {
 class _MatiereW extends StatelessWidget {
   final CreneauHoraireProvider horaires;
 
-  final Matiere matiere;
+  final MatiereData matiere;
   final VueMatiere semaines;
 
   final void Function(List<DateHeure> hours, List<int> semaines) onAdd;
@@ -81,7 +84,7 @@ class _MatiereW extends StatelessWidget {
             children: [
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.1,
-                child: Text(formatMatiere(matiere),
+                child: Text(matiere.format(),
                     style: const TextStyle(fontSize: 18)),
               ),
               Expanded(

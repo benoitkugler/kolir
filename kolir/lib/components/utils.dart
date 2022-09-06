@@ -1,22 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kolir/logic/colloscope.dart';
-import 'package:kolir/logic/utils.dart';
-
-final matieresColors = [
-  Colors.blue.shade200,
-  Colors.green.shade200,
-  Colors.orange.shade300,
-  Colors.yellow.shade300,
-  Colors.pink.shade300,
-  Colors.purple.shade300,
-  Colors.teal.shade300,
-];
-
-extension ColorM on Matiere {
-  Color get color {
-    return matieresColors[index];
-  }
-}
+import 'package:kolir/logic/settings.dart';
 
 enum ModeView { matieres, groupes, semaines }
 
@@ -179,9 +163,8 @@ class ColleW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final time = colle.date.formatDateHeure();
-    final text = showMatiere
-        ? "${formatMatiere(colle.matiere, dense: true)} $time"
-        : time;
+    final text =
+        showMatiere ? "${colle.matiere.format(dense: true)} $time" : time;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
@@ -223,9 +206,11 @@ const clearIcon = IconData(0xf645, fontFamily: 'MaterialIcons');
 
 /// [MatieresTabs] is a tab view, indexed by [Matiere]
 class MatieresTabs extends StatefulWidget {
+  final MatiereProvider matieres;
+
   final Widget Function(Matiere mat) builder;
 
-  const MatieresTabs(this.builder, {super.key});
+  const MatieresTabs(this.matieres, this.builder, {super.key});
 
   @override
   State<MatieresTabs> createState() => _MatieresTabsState();
@@ -237,11 +222,11 @@ class _MatieresTabsState extends State<MatieresTabs>
 
   @override
   void initState() {
-    ct = TabController(length: Matiere.values.length, vsync: this);
+    ct = TabController(length: widget.matieres.values.length, vsync: this);
     super.initState();
   }
 
-  Matiere get mat => Matiere.values[ct.index];
+  Matiere get mat => widget.matieres.values[ct.index].index;
 
   @override
   Widget build(BuildContext context) {
@@ -261,10 +246,10 @@ class _MatieresTabsState extends State<MatieresTabs>
                   labelColor: Colors.black,
                   splashBorderRadius:
                       const BorderRadius.all(Radius.circular(4)),
-                  tabs: Matiere.values
+                  tabs: widget.matieres.values
                       .map((e) => Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(formatMatiere(e)),
+                            child: Text(e.format()),
                           ))
                       .toList(),
                 ),
