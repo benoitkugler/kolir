@@ -85,13 +85,13 @@ const defautHoraires = CreneauHoraireProvider([
 
 typedef MatiereID = int;
 
-class MatiereData {
+class Matiere {
   /// [index] is the id of the enum value.
   final MatiereID index;
   final String name;
   final String shortName;
   final Color color;
-  const MatiereData(this.index, this.name, this.shortName, this.color);
+  const Matiere(this.index, this.name, this.shortName, this.color);
 
   String format({bool dense = false}) {
     return dense ? shortName : name;
@@ -106,8 +106,8 @@ class MatiereData {
     };
   }
 
-  factory MatiereData.fromJson(Map<String, dynamic> json) {
-    return MatiereData(
+  factory Matiere.fromJson(Map<String, dynamic> json) {
+    return Matiere(
       json["index"],
       json["name"],
       json["shortName"],
@@ -117,7 +117,7 @@ class MatiereData {
 
   @override
   bool operator ==(Object other) =>
-      other is MatiereData &&
+      other is Matiere &&
       other.runtimeType == runtimeType &&
       other.index == index &&
       other.name == name &&
@@ -130,7 +130,7 @@ class MatiereData {
 }
 
 class MatiereProvider {
-  final List<MatiereData> values;
+  final List<Matiere> values;
   const MatiereProvider(this.values);
 
   List<dynamic> toJson() {
@@ -139,7 +139,7 @@ class MatiereProvider {
 
   factory MatiereProvider.fromJson(dynamic json) {
     return MatiereProvider(
-        (json as List).map((e) => MatiereData.fromJson(e)).toList());
+        (json as List).map((e) => Matiere.fromJson(e)).toList());
   }
 
   MatiereProvider copy() {
@@ -152,11 +152,11 @@ class MatiereProvider {
 }
 
 const defautMatieres = MatiereProvider([
-  MatiereData(0, "Mathématiques", "Maths.", Color(0xFF90CAF9)),
-  MatiereData(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7)),
-  MatiereData(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
-  MatiereData(3, "Allemand", "Allem.", Color(0xFFFFF176)),
-  MatiereData(4, "Espagnol", "Espa.", Color(0xFFF06292)),
-  MatiereData(5, "Francais", "Fran.", Color(0xFFBA68C8)),
-  MatiereData(6, "Philosophie", "Philo.", Color(0xFF4DB6AC)),
+  Matiere(0, "Mathématiques", "Maths.", Color(0xFF90CAF9)),
+  Matiere(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7)),
+  Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
+  Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176)),
+  Matiere(4, "Espagnol", "Espa.", Color(0xFFF06292)),
+  Matiere(5, "Francais", "Fran.", Color(0xFFBA68C8)),
+  Matiere(6, "Philosophie", "Philo.", Color(0xFF4DB6AC)),
 ]);

@@ -3,7 +3,7 @@ import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
 
-typedef Creneaux = Map<Matiere, VueMatiere>;
+typedef Creneaux = Map<MatiereID, VueMatiere>;
 
 final colorWarning = Colors.deepOrange.shade300;
 
@@ -17,9 +17,9 @@ class VueGroupeW extends StatefulWidget {
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
 
-  final void Function(GroupeID groupe, Matiere mat, int creneauIndex)
+  final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
-  final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
+  final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribueCreneaux;
 
   const VueGroupeW(this.matieresList, this.groupes, this.colles,
@@ -128,7 +128,7 @@ class _GroupeW extends StatefulWidget {
   final Diagnostic? diagnostic;
 
   final void Function() onRemove;
-  final void Function(Matiere mat, int creneauIndex) onToogleCreneau;
+  final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
 
   const _GroupeW(this.matieresList, this.groupe, this.semaines, this.creneaux,
       this.diagnostic, this.onRemove, this.onToogleCreneau,
@@ -228,7 +228,7 @@ class _GroupEditW extends StatelessWidget {
   final GroupeID groupe;
   final Creneaux creneaux;
 
-  final void Function(Matiere mat, int creneauIndex) onToogleCreneau;
+  final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
 
   const _GroupEditW(
       this.matieresList, this.groupe, this.creneaux, this.onToogleCreneau,
@@ -250,7 +250,7 @@ class _GroupEditW extends StatelessWidget {
 
 class _GroupEditMatiere extends StatelessWidget {
   final GroupeID groupeID;
-  final MatiereData matiere;
+  final Matiere matiere;
   final VueMatiere creneaux;
 
   final void Function(int creneauIndex) onToogleCreneau;
@@ -351,9 +351,9 @@ class _DiagnosticW extends StatelessWidget {
 class _Assistant extends StatelessWidget {
   final MatiereProvider matieresList;
   final List<Groupe> groupes;
-  final Map<Matiere, VueMatiere> creneaux;
+  final Map<MatiereID, VueMatiere> creneaux;
 
-  final void Function(Matiere mat, List<GroupeID> groupes, List<int> semaines,
+  final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribue;
 
   const _Assistant(
@@ -374,7 +374,7 @@ class _Assistant extends StatelessWidget {
 }
 
 class _AssistantMatiere extends StatefulWidget {
-  final MatiereData matiere;
+  final Matiere matiere;
   final List<Groupe> groupes;
   final VueMatiere creneaux;
 
@@ -513,7 +513,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
 class _AssistantMatiereCreneaux extends StatelessWidget {
   final Set<int> selectedSemaines;
 
-  final MatiereData matiere;
+  final Matiere matiere;
   final VueMatiere semaines;
 
   final void Function(int semaine, bool selected) onSelectSemaine;

@@ -8,6 +8,7 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
 void main() async {
@@ -117,25 +118,25 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void addCreneaux(Matiere mat, List<DateHeure> hours, List<int> semaines) {
+  void addCreneaux(MatiereID mat, List<DateHeure> hours, List<int> semaines) {
     setState(() {
       currentColloscope.addCreneaux(mat, hours, semaines);
     });
   }
 
-  void removeCreneau(Matiere mat, int creneauIndex) {
+  void removeCreneau(MatiereID mat, int creneauIndex) {
     setState(() {
       currentColloscope.removeCreneau(mat, creneauIndex);
     });
   }
 
-  void toogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
+  void toogleCreneau(GroupeID groupe, MatiereID mat, int creneauIndex) {
     setState(() {
       currentColloscope.toogleCreneau(groupe, mat, creneauIndex);
     });
   }
 
-  void attribueCreneaux(Matiere matiere, List<GroupeID> groupes,
+  void attribueCreneaux(MatiereID matiere, List<GroupeID> groupes,
       List<int> semaines, bool usePermuation) {
     setState(() {
       currentColloscope.attribueCyclique(

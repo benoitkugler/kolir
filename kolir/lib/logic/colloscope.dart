@@ -7,7 +7,7 @@ import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-typedef Collisions = Map<DateHeure, List<MatiereData>>;
+typedef Collisions = Map<DateHeure, List<Matiere>>;
 
 /// [Diagnostic] indique les problèmes de la répartition courante,
 /// pour un groupe.
@@ -44,7 +44,8 @@ class Groupe {
   int get hashCode => id;
 }
 
-bool areMatieresEqual(Map<Matiere, _Creneaux> m1, Map<Matiere, _Creneaux> m2) {
+bool areMatieresEqual(
+    Map<MatiereID, _Creneaux> m1, Map<MatiereID, _Creneaux> m2) {
   if (m1.length != m2.length) {
     return false;
   }
@@ -63,7 +64,7 @@ bool areMatieresEqual(Map<Matiere, _Creneaux> m1, Map<Matiere, _Creneaux> m2) {
 /// Il peut être enregistré (au format JSON), et affiché
 /// sous différente formes (par matière, par semaine, par élève)
 class Colloscope {
-  final Map<Matiere, _Creneaux> _matieres;
+  final Map<MatiereID, _Creneaux> _matieres;
 
   final List<Groupe> groupes;
 
@@ -206,7 +207,7 @@ class Colloscope {
         groupes.map((k) => MapEntry(k.id, _groupeSemaines(k.id))));
   }
 
-  Map<Matiere, VueMatiere> parMatiere() {
+  Map<MatiereID, VueMatiere> parMatiere() {
     final groupeMap = Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
 
     return _matieres.map((matiere, creneaux) {
@@ -233,7 +234,7 @@ class Colloscope {
       final parSemaine = item.value;
 
       // collisions
-      final parCreneau = <DateHeure, List<MatiereData>>{};
+      final parCreneau = <DateHeure, List<Matiere>>{};
       for (var crs in parSemaine) {
         for (var cr in crs.item) {
           final l = parCreneau.putIfAbsent(cr.date, () => []);
@@ -309,7 +310,7 @@ class Colloscope {
   /// affectées, dupliquant et adaptant la liste pour chaque semaine
   /// demandée
   void addCreneaux(
-      Matiere mat, List<DateHeure> semaineHours, List<int> semaines) {
+      MatiereID mat, List<DateHeure> semaineHours, List<int> semaines) {
     List<_PopulatedCreneau> finalTimes = [];
     for (var semaine in semaines) {
       for (var time in semaineHours) {
@@ -327,13 +328,13 @@ class Colloscope {
   }
 
   /// removeCreneau supprime le creneau pour tous les groupes
-  void removeCreneau(Matiere mat, int creneauIndex) {
+  void removeCreneau(MatiereID mat, int creneauIndex) {
     final l = _matieres[mat] ?? [];
     l.removeAt(creneauIndex);
   }
 
   /// toogleCreneau change l'état du créneau donné
-  void toogleCreneau(GroupeID groupe, Matiere mat, int creneauIndex) {
+  void toogleCreneau(GroupeID groupe, MatiereID mat, int creneauIndex) {
     final l = _matieres[mat] ?? [];
     final cr = l[creneauIndex];
     l[creneauIndex] =
@@ -344,7 +345,7 @@ class Colloscope {
   /// groupes donnés.
   /// Pour simplifier, on suppose que le nombre de groupes correspond au nombre
   /// de créneaux disponibles.
-  void attribueCyclique(Matiere matiere, List<GroupeID> groupes,
+  void attribueCyclique(MatiereID matiere, List<GroupeID> groupes,
       List<int> semaines, bool usePermuation) {
     var permutatioOffset = 0;
     final creneaux = _matieres[matiere] ?? [];
@@ -368,25 +369,17 @@ class Colloscope {
   }
 }
 
-typedef Matiere = MatiereID;
-
 // ---------------------------------------------------------
-
-class Pair<K, V> {
-  final K k;
-  final V v;
-  const Pair(this.k, this.v);
-}
 
 class Colle {
   final DateHeure date;
-  final MatiereData matiere;
+  final Matiere matiere;
   const Colle(this.date, this.matiere);
 }
 
 typedef VueGroupe = List<SemaineTo<List<Colle>>>; // semaines => colles
 
-typedef VueSemaine = Map<Matiere, List<PopulatedCreneau>>;
+typedef VueSemaine = Map<MatiereID, List<PopulatedCreneau>>;
 
 /// les créneaux sont triés par date, et peuvent
 /// etre identifiés par index pour gérer les doublons

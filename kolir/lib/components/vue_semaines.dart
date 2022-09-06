@@ -67,7 +67,7 @@ class _SemaineBody extends StatelessWidget {
 }
 
 class _Group extends StatelessWidget {
-  final MatiereData matiere;
+  final Matiere matiere;
   final PopulatedCreneau creneau;
 
   const _Group(this.matiere, this.creneau, {super.key});

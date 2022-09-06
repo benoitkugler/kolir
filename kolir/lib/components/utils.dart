@@ -204,11 +204,11 @@ const deleteIcon = Icon(
 
 const clearIcon = IconData(0xf645, fontFamily: 'MaterialIcons');
 
-/// [MatieresTabs] is a tab view, indexed by [Matiere]
+/// [MatieresTabs] is a tab view, indexed by [MatiereID]
 class MatieresTabs extends StatefulWidget {
   final MatiereProvider matieres;
 
-  final Widget Function(Matiere mat) builder;
+  final Widget Function(MatiereID mat) builder;
 
   const MatieresTabs(this.matieres, this.builder, {super.key});
 
@@ -226,7 +226,7 @@ class _MatieresTabsState extends State<MatieresTabs>
     super.initState();
   }
 
-  Matiere get mat => widget.matieres.values[ct.index].index;
+  MatiereID get mat => widget.matieres.values[ct.index].index;
 
   @override
   Widget build(BuildContext context) {

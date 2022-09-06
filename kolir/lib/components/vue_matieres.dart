@@ -10,11 +10,11 @@ class VueMatiereW extends StatelessWidget {
   final MatiereProvider matieresList;
   final CreneauHoraireProvider horaires;
 
-  final Map<Matiere, VueMatiere> byMatieres;
+  final Map<MatiereID, VueMatiere> byMatieres;
 
-  final void Function(Matiere mat, List<DateHeure> hours, List<int> semaines)
+  final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines)
       onAdd;
-  final void Function(Matiere mat, int creneauIndex) onDelete;
+  final void Function(MatiereID mat, int creneauIndex) onDelete;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
       this.onAdd, this.onDelete,
@@ -48,7 +48,7 @@ class VueMatiereW extends StatelessWidget {
 class _MatiereW extends StatelessWidget {
   final CreneauHoraireProvider horaires;
 
-  final MatiereData matiere;
+  final Matiere matiere;
   final VueMatiere semaines;
 
   final void Function(List<DateHeure> hours, List<int> semaines) onAdd;
