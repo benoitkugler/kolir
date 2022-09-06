@@ -1,0 +1,28 @@
+name: kolir
+version: 0.1.0
+summary: Editeur de colloscope
+description: Une application pour construire et imprimer un colloscope.
+
+confinement: strict
+base: core18
+grade: stable
+
+slots:
+  dbus-kolir: # adjust accordingly to your app name
+    interface: dbus
+    bus: session
+    name: org.bk.kolir # adjust accordingly to your app name and
+
+apps:
+  kolir:
+    command: kolir
+    extensions: [flutter-master] # Where "master" defines which Flutter channel to use for the build
+    plugs:
+      - network
+    slots:
+      - dbus-kolir
+parts:
+  kolir:
+    source: .
+    plugin: flutter
+    flutter-target: lib/main.dart # The main entry-point file of the application

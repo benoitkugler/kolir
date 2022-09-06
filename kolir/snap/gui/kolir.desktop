@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Kolir
+Comment=Editeur de colloscope
+Exec=kolir 
+Icon=${SNAP}/meta/gui/kolir.png # replace name to your app name
+Terminal=false
+Type=Application
+Categories=Education; #adjust accordingly your snap category
