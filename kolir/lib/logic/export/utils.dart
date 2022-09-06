@@ -48,6 +48,7 @@ const _template = """
         border-radius: 4px;
         padding: 2px;
         margin: 2px;
+        text-align: center;
       }
 
       /* STYLE */
