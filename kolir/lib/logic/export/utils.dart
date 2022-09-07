@@ -30,11 +30,21 @@ const _template = """
       th,
       td {
         border-bottom: 1px solid #ddd;
+        page-break-inside: avoid !important;
+      }
+
+      .avoid-page-break {
+        page-break-inside: avoid !important;
+        margin: 2px 0 2px 0; /* to keep the page break from cutting too close to the text in the div */
       }
 
       th,
       td {
         padding: 2px;
+      }
+
+      td {
+        text-align: center;
       }
 
       tr:nth-child(even) {

@@ -13,13 +13,13 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
     final matieres = col.matieresList.values.map((mat) {
       final colles = semaine.item[mat.index] ?? [];
       final creneaux = colles.map((e) =>
-          "<div class='chip matiere-${mat.index}'><b>${e.groupe?.name ?? ''}</b> ${e.date.formatDateHeure(dense: true)} - <i>${e.colleur}</i></div>");
-      return "<td style='text-align: center'>${creneaux.join('')}</td>";
+          "<div class='chip matiere-${mat.index}'><b>${e.groupe?.name ?? ''}</b> ${e.date.formatDateHeure(dense: true)} <i>${e.colleur}</i></div>");
+      return "<td style='text-align: center'><div class='avoid-page-break'>${creneaux.join('')}</div></td>";
     });
 
     final row = """
       <tr>
-        <td>S ${semaine.semaine}</td>
+        <td><div class='avoid-page-break'>S ${semaine.semaine}</div></td>
         ${matieres.join("\n")}
       </tr>
       """;
@@ -41,5 +41,6 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
     """;
 
   final style = cssMatieresColorDefinition(matieresColors);
-  return fillTemplate([page], additionalStyle: style);
+  const lowerSize = "body { font-size: 9pt}";
+  return fillTemplate([page], additionalStyle: "$style \n $lowerSize");
 }
