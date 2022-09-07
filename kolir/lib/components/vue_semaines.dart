@@ -76,7 +76,7 @@ class _Group extends StatelessWidget {
   Widget build(BuildContext context) {
     final group = creneau.groupe?.name ?? "?";
     return Tooltip(
-      message: matiere.format(),
+      message: "${matiere.format()} - ${creneau.colleur}",
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Container(

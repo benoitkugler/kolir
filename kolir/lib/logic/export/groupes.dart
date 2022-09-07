@@ -11,8 +11,8 @@ String groupesToHTML(Colloscope col) {
     final groupeID = item.key;
 
     final rows = item.value.map((semaine) {
-      final creneaux = semaine.item.map((e) =>
-          "<div class='chip'>${e.matiere.format(dense: true)} ${e.date.formatDateHeure()}</div>");
+      final creneaux = semaine.item.map((cr) =>
+          "<div class='chip'>${cr.matiere.format(dense: true)} ${cr.date.formatDateHeure()} - <i>${cr.colleur}</i></div>");
       return """
       <tr>
         <td>Semaine ${semaine.semaine}</td>

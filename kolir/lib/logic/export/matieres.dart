@@ -12,7 +12,7 @@ String matieresToHTML(Colloscope col) {
 
     final rows = item.value.map((semaine) {
       final creneaux = semaine.item.map((e) =>
-          "<div class='chip'><i>${e.groupe ?? ''}</i> ${e.date.formatDateHeure()}</div>");
+          "<div class='chip'><b>${e.groupe?.name ?? ''}</b> ${e.date.formatDateHeure()} - <i>${e.colleur}</i></div>");
       return """
       <tr>
         <td>Semaine ${semaine.semaine}</td>
