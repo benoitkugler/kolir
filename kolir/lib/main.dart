@@ -118,15 +118,22 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void addCreneaux(MatiereID mat, List<DateHeure> hours, List<int> semaines) {
+  void addCreneaux(MatiereID mat, List<DateHeure> hours, List<int> semaines,
+      String colleur) {
     setState(() {
-      currentColloscope.addCreneaux(mat, hours, semaines);
+      currentColloscope.addCreneaux(mat, hours, semaines, colleur);
     });
   }
 
   void removeCreneau(MatiereID mat, int creneauIndex) {
     setState(() {
       currentColloscope.removeCreneau(mat, creneauIndex);
+    });
+  }
+
+  void editCreneauColleur(MatiereID mat, int creneauIndex, String colleur) {
+    setState(() {
+      currentColloscope.editCreneauColleur(mat, creneauIndex, colleur);
     });
   }
 
@@ -183,11 +190,13 @@ class _HomeState extends State<_Home> {
         );
       case ModeView.matieres:
         return VueMatiereW(
-            currentColloscope.matieresList,
-            currentColloscope.creneauxHoraires,
-            currentColloscope.parMatiere(),
-            addCreneaux,
-            removeCreneau);
+          currentColloscope.matieresList,
+          currentColloscope.creneauxHoraires,
+          currentColloscope.parMatiere(),
+          onAdd: addCreneaux,
+          onDelete: removeCreneau,
+          onEditColleur: editCreneauColleur,
+        );
     }
   }
 

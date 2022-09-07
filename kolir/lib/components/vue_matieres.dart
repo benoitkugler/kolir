@@ -12,13 +12,17 @@ class VueMatiereW extends StatelessWidget {
 
   final Map<MatiereID, VueMatiere> byMatieres;
 
-  final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines)
-      onAdd;
+  final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines,
+      String colleur) onAdd;
   final void Function(MatiereID mat, int creneauIndex) onDelete;
+  final void Function(MatiereID mat, int creneauIndex, String colleur)
+      onEditColleur;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
-      this.onAdd, this.onDelete,
-      {super.key});
+      {required this.onAdd,
+      required this.onDelete,
+      required this.onEditColleur,
+      super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,15 +34,13 @@ class VueMatiereW extends StatelessWidget {
           child: ListView(
         children: entries
             .map((e) => _MatiereW(
-                horaires,
-                matieresList.values[e.key],
-                e.value,
-                (h, s) => onAdd(
-                      e.key,
-                      h,
-                      s,
-                    ),
-                (index) => onDelete(e.key, index)))
+                  horaires,
+                  matieresList.values[e.key],
+                  e.value,
+                  (h, s, c) => onAdd(e.key, h, s, c),
+                  (index) => onDelete(e.key, index),
+                  (index, colleur) => onEditColleur(e.key, index, colleur),
+                ))
             .toList(),
       )),
     );
@@ -51,22 +53,24 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
 
-  final void Function(List<DateHeure> hours, List<int> semaines) onAdd;
+  final void Function(List<DateHeure> hours, List<int> semaines, String colleur)
+      onAdd;
   final void Function(int creneauIndex) onDelete;
+  final void Function(int creneauIndex, String colleur) onEditColleur;
 
-  const _MatiereW(
-      this.horaires, this.matiere, this.semaines, this.onAdd, this.onDelete,
+  const _MatiereW(this.horaires, this.matiere, this.semaines, this.onAdd,
+      this.onDelete, this.onEditColleur,
       {super.key});
 
   void showAddCreneaux(BuildContext context) {
     showDialog(
         context: context,
         builder: (context) {
-          return WeekCalendar(
+          return AssistantCreneaux(
             horaires,
-            (creneaux, semaines) {
+            (creneaux, semaines, colleur) {
               Navigator.of(context).pop();
-              onAdd(creneaux, semaines);
+              onAdd(creneaux, semaines, colleur);
             },
           );
         });
@@ -95,9 +99,11 @@ class _MatiereW extends StatelessWidget {
                             Wrap(
                               children: creneaux.item
                                   .map((e) => ColleW(
-                                        Colle(e.date, matiere),
+                                        e.toColle(matiere),
                                         showMatiere: false,
                                         onDelete: () => onDelete(e.index),
+                                        onEditColleur: (colleur) =>
+                                            onEditColleur(e.index, colleur),
                                       ))
                                   .toList(),
                             )))

@@ -153,24 +153,67 @@ class _SemaineRow extends StatelessWidget {
   }
 }
 
-class ColleW extends StatelessWidget {
+class ColleW extends StatefulWidget {
   final Colle colle;
   final bool showMatiere;
-  final void Function()? onDelete;
 
-  const ColleW(this.colle, {this.showMatiere = true, this.onDelete, super.key});
+  final void Function()? onDelete;
+  final void Function(String)? onEditColleur;
+
+  const ColleW(this.colle,
+      {this.showMatiere = true, this.onDelete, this.onEditColleur, super.key})
+      : assert((onDelete == null) == (onEditColleur == null));
+
+  @override
+  State<ColleW> createState() => _ColleWState();
+}
+
+class _ColleWState extends State<ColleW> {
+  var colleurController = TextEditingController();
+
+  void showEditColleur() async {
+    colleurController.text = widget.colle.colleur;
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => Dialog(
+                child: Card(
+                    child: SizedBox(
+              width: 300,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    "Modifier le colleur",
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                    controller: colleurController,
+                    decoration: const InputDecoration(labelText: "Colleur")),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text("Valider")),
+                const SizedBox(height: 10),
+              ]),
+            ))));
+    if (ok != null) {
+      widget.onEditColleur!(colleurController.text);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final time = colle.date.formatDateHeure();
-    final text =
-        showMatiere ? "${colle.matiere.format(dense: true)} $time" : time;
+    final time = widget.colle.date.formatDateHeure();
+    final text = widget.showMatiere
+        ? "${widget.colle.matiere.format(dense: true)} $time"
+        : time;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
-          color: colle.matiere.color.withOpacity(0.1),
-          border: Border.all(color: colle.matiere.color),
+          color: widget.colle.matiere.color.withOpacity(0.1),
+          border: Border.all(color: widget.colle.matiere.color),
           borderRadius: const BorderRadius.all(
             Radius.circular(4),
           ),
@@ -180,17 +223,42 @@ class ColleW extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(text),
-            onDelete == null
+            Padding(
+              padding: const EdgeInsets.only(left: 6.0),
+              child: Text(widget.colle.colleur,
+                  style: const TextStyle(fontStyle: FontStyle.italic)),
+            ),
+            widget.onDelete == null
                 ? const SizedBox(
                     height: 25,
                     width: 10,
                   )
-                : IconButton(
-                    padding: const EdgeInsets.all(4),
-                    splashRadius: 12,
-                    onPressed: onDelete,
-                    icon: const Icon(clearIcon),
-                    color: Colors.red)
+                : PopupMenuButton(
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        onTap: () =>
+                            Future.delayed(const Duration(), showEditColleur),
+                        child: const ListTile(
+                          title: Text("Modifier le colleur"),
+                          horizontalTitleGap: 10,
+                          minLeadingWidth: 0,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        onTap: widget.onDelete,
+                        child: const ListTile(
+                          leading: Icon(clearIcon, color: Colors.red),
+                          title: Text("Supprimer"),
+                          horizontalTitleGap: 10,
+                          minLeadingWidth: 0,
+                        ),
+                      )
+                    ],
+                    icon: const Icon(
+                        IconData(0xe404, fontFamily: 'MaterialIcons')),
+                    splashRadius: 14,
+                    tooltip: "Editer...",
+                  )
           ],
         ),
       ),

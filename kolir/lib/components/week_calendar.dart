@@ -5,20 +5,23 @@ import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-class WeekCalendar extends StatefulWidget {
+class AssistantCreneaux extends StatefulWidget {
   final CreneauHoraireProvider creneauxHoraires;
 
-  final void Function(List<DateHeure> creneaux, List<int> semaines) onAdd;
+  final void Function(
+      List<DateHeure> creneaux, List<int> semaines, String colleur) onAdd;
 
-  const WeekCalendar(this.creneauxHoraires, this.onAdd, {super.key});
+  const AssistantCreneaux(this.creneauxHoraires, this.onAdd, {super.key});
 
   @override
-  State<WeekCalendar> createState() => _WeekCalendarState();
+  State<AssistantCreneaux> createState() => _AssistantCreneauxState();
 }
 
-class _WeekCalendarState extends State<WeekCalendar> {
+class _AssistantCreneauxState extends State<AssistantCreneaux> {
   List<DateHeure> creneaux = [];
-  TextEditingController semainesController = TextEditingController();
+  var semainesController = TextEditingController();
+  var colleurController = TextEditingController();
+
   bool showSamedi = false;
 
   @override
@@ -151,6 +154,16 @@ class _WeekCalendarState extends State<WeekCalendar> {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: TextField(
+                        controller: colleurController,
+                        decoration: const InputDecoration(
+                            label: Text("Colleur"),
+                            helperText:
+                                "Nom du colleur pour les créneaux choisis."),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
                         controller: semainesController,
                         decoration: const InputDecoration(
                             label: Text("Semaines"),
@@ -161,7 +174,10 @@ class _WeekCalendarState extends State<WeekCalendar> {
                     ElevatedButton(
                         onPressed: semaines.isEmpty || creneaux.isEmpty
                             ? null
-                            : () => widget.onAdd(creneaux, semaines),
+                            : () => widget.onAdd(
+                                creneaux, semaines, colleurController.text),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green),
                         child: const Text("Ajouter")),
                   ],
                 ),

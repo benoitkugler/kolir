@@ -294,7 +294,7 @@ class _GroupEditMatiere extends StatelessWidget {
                 Wrap(
                   children: semaine.item
                       .map((e) => _Creneau(
-                            Colle(e.date, matiere),
+                            e.toColle(matiere),
                             getState(semaine.item, e),
                             () => onToogleCreneau(e.index),
                           ))
@@ -563,7 +563,7 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
                                 children: semaine.item
                                     .map(
                                       (e) => _Creneau(
-                                        Colle(e.date, matiere),
+                                        e.toColle(matiere),
                                         e.groupe == null
                                             ? _CS.disponible
                                             : _CS.dejaPris,
