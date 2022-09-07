@@ -173,6 +173,8 @@ class _ColleWState extends State<ColleW> {
 
   void showEditColleur() async {
     colleurController.text = widget.colle.colleur;
+    colleurController.selection = TextSelection(
+        baseOffset: 0, extentOffset: colleurController.text.length);
     final ok = await showDialog<bool>(
         context: context,
         builder: (context) => Dialog(
@@ -188,6 +190,7 @@ class _ColleWState extends State<ColleW> {
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
+                    autofocus: true,
                     controller: colleurController,
                     decoration: const InputDecoration(labelText: "Colleur")),
                 const SizedBox(height: 20),
