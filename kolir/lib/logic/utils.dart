@@ -9,8 +9,22 @@ const _days = [
   "Dim",
 ];
 
-String formatWeekday(int weekday) {
-  return _days[weekday];
+const _daysLong = [
+  "",
+  "Lundi",
+  "Mardi",
+  "Mercredi",
+  "Jeudi",
+  "Vendredi",
+  "Samedi",
+  "Dimanche",
+];
+
+String formatWeekday(int weekday, {dense = true}) {
+  if (dense) {
+    return _days[weekday];
+  }
+  return _daysLong[weekday];
 }
 
 String _formatHeure(int hour, int minute) {

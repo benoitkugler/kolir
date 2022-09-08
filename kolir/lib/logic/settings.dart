@@ -152,11 +152,11 @@ class MatiereProvider {
 }
 
 const defautMatieres = MatiereProvider([
-  Matiere(0, "Mathématiques", "Maths.", Color(0xFF90CAF9)),
+  Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1)),
   Matiere(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7)),
   Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
   Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176)),
   Matiere(4, "Espagnol", "Espa.", Color(0xFFF06292)),
   Matiere(5, "Francais", "Fran.", Color(0xFFBA68C8)),
-  Matiere(6, "Philosophie", "Philo.", Color(0xFF4DB6AC)),
+  Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58)),
 ]);

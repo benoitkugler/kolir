@@ -79,6 +79,7 @@ class Colloscope {
       {this.notes = "",
       this.creneauxHoraires = defautHoraires,
       this.matieresList = defautMatieres}) {
+    matieresList = defautMatieres;
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
 
@@ -88,7 +89,8 @@ class Colloscope {
 
     assert(List.generate(matieresList.values.length,
         (index) => index == matieresList.values[index].index).every((e) => e));
-    // TODO: assert ID
+    final mm = _matiereMap;
+    assert(_matieres.keys.every((id) => mm.containsKey(id)));
   }
 
   Colloscope copy() {
@@ -164,10 +166,13 @@ class Colloscope {
   }
 
   Map get _groupeMap => Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+  Map get _matiereMap =>
+      Map.fromEntries(matieresList.values.map((e) => MapEntry(e.index, e)));
 
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
   List<SemaineTo<VueSemaine>> parSemaine() {
+    final matiereMap = _matiereMap;
     final groupeMap = _groupeMap;
     final semaines = <int, Map<MatiereID, List<PopulatedCreneau>>>{};
     for (var item in _matieres.entries) {
@@ -179,7 +184,7 @@ class Colloscope {
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => {});
         final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
         groupesParMatiere.add(PopulatedCreneau(creneauIndex, creneau.date,
-            groupeMap[creneau.groupeID], creneau.colleur));
+            groupeMap[creneau.groupeID], creneau.colleur, matiereMap[matiere]));
       }
     }
     return _semaineMapToList(semaines);
@@ -209,7 +214,8 @@ class Colloscope {
   }
 
   Map<MatiereID, VueMatiere> parMatiere() {
-    final groupeMap = Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+    final matiereMap = _matiereMap;
+    final groupeMap = _groupeMap;
 
     return _matieres.map((matiere, creneaux) {
       final semaines = <int, List<PopulatedCreneau>>{};
@@ -219,7 +225,7 @@ class Colloscope {
         final creneau = creneaux[creneauIndex];
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => []);
         semaine.add(PopulatedCreneau(creneauIndex, creneau.date,
-            groupeMap[creneau.groupeID], creneau.colleur));
+            groupeMap[creneau.groupeID], creneau.colleur, matiereMap[matiere]));
       }
       // creneaux is already sorted
       return MapEntry(matiere, _semaineMapToList(semaines));
@@ -468,8 +474,10 @@ class PopulatedCreneau {
   final DateHeure date;
   final Groupe? groupe;
   final String colleur;
+  final Matiere matiere;
 
-  const PopulatedCreneau(this.index, this.date, this.groupe, this.colleur);
+  const PopulatedCreneau(
+      this.index, this.date, this.groupe, this.colleur, this.matiere);
 
   Colle toColle(Matiere matiere) => Colle(date, matiere, colleur);
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
+import 'package:kolir/logic/utils.dart';
 
 class VueSemaineW extends StatelessWidget {
   final MatiereProvider matieresList;
@@ -43,38 +44,92 @@ class VueSemaineW extends StatelessWidget {
   }
 }
 
+// présente les créneaux par jour
 class _SemaineBody extends StatelessWidget {
   final MatiereProvider matieresList;
   final VueSemaine semaine;
 
   const _SemaineBody(this.matieresList, this.semaine, {super.key});
 
+  List<List<PopulatedCreneau>> weekdayCreneaux(int weekday) {
+    final forDay = semaine.values
+        .map((l) => l.where((cr) => cr.date.weekday == weekday))
+        .reduce((value, element) => [...value, ...element]);
+    final byDate = <DateHeure, List<PopulatedCreneau>>{};
+    for (var creneau in forDay) {
+      final l = byDate.putIfAbsent(creneau.date, () => []);
+      l.add(creneau);
+    }
+    final l = byDate.entries.toList();
+    l.sort((a, b) => a.key.compareTo(b.key));
+    return l.map((e) => e.value).toList();
+  }
+
+  static const weekdays = [1, 2, 3, 4, 5, 6];
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: matieresList.values
-            .map((matiere) => Column(
-                children: (semaine[matiere.index] ?? [])
-                    .map((creneau) => _Group(matiere, creneau))
-                    .toList()))
-            .toList(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: weekdays
+              .map((weekday) => _WeekdayW(weekday, weekdayCreneaux(weekday)))
+              .toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeekdayW extends StatelessWidget {
+  final int weekday;
+  final List<List<PopulatedCreneau>> creneaux;
+  const _WeekdayW(this.weekday, this.creneaux, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+        decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: const BorderRadius.all(Radius.circular(6))),
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Text(formatWeekday(weekday, dense: false),
+                style: TextStyle(fontSize: 16)),
+          ),
+          if (creneaux.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: const Text("Aucune colle."),
+            ),
+          ...creneaux
+              .map((creneauxParHeure) => Row(
+                  children: creneauxParHeure
+                      .map((creneau) => _Group(creneau))
+                      .toList()))
+              .toList()
+        ]),
       ),
     );
   }
 }
 
 class _Group extends StatelessWidget {
-  final Matiere matiere;
   final PopulatedCreneau creneau;
 
-  const _Group(this.matiere, this.creneau, {super.key});
+  const _Group(this.creneau, {super.key});
 
   @override
   Widget build(BuildContext context) {
     final group = creneau.groupe?.name ?? "?";
+    final matiere = creneau.matiere;
     return Tooltip(
       message: "${matiere.format()} - ${creneau.colleur}",
       child: Padding(
@@ -84,8 +139,8 @@ class _Group extends StatelessWidget {
           decoration: BoxDecoration(
               border: Border.all(color: matiere.color),
               borderRadius: const BorderRadius.all(Radius.circular(8)),
-              color: matiere.color.withOpacity(0.4)),
-          child: Text("${creneau.date.formatDateHeure()}  $group "),
+              color: matiere.color.withOpacity(0.5)),
+          child: Text("${creneau.date.formatHeure()}  $group "),
         ),
       ),
     );
