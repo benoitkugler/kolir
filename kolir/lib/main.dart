@@ -125,9 +125,15 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void removeCreneau(MatiereID mat, int creneauIndex) {
+  void deleteCreneau(MatiereID mat, int creneauIndex) {
     setState(() {
-      currentColloscope.removeCreneau(mat, creneauIndex);
+      currentColloscope.deleteCreneau(mat, creneauIndex);
+    });
+  }
+
+  void deleteSemaine(MatiereID mat, int semaine) {
+    setState(() {
+      currentColloscope.deleteSemaine(mat, semaine);
     });
   }
 
@@ -148,6 +154,12 @@ class _HomeState extends State<_Home> {
     setState(() {
       currentColloscope.attribueCyclique(
           matiere, groupes, semaines, usePermuation);
+    });
+  }
+
+  void repeteMotifCourant(MatiereID matiere, int nombre, int? periode) {
+    setState(() {
+      currentColloscope.repeteMotifCourant(matiere, nombre, periode: periode);
     });
   }
 
@@ -194,8 +206,10 @@ class _HomeState extends State<_Home> {
           currentColloscope.creneauxHoraires,
           currentColloscope.parMatiere(),
           onAdd: addCreneaux,
-          onDelete: removeCreneau,
+          onDeleteCreneau: deleteCreneau,
+          onDeleteSemaine: deleteSemaine,
           onEditColleur: editCreneauColleur,
+          onRepeteMotifCourant: repeteMotifCourant,
         );
     }
   }

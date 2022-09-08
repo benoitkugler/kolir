@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:kolir/logic/settings.dart';
@@ -324,10 +325,16 @@ class Colloscope {
         a.date.compareTo(b.date)); // make sure sort invariant is preserved
   }
 
-  /// removeCreneau supprime le creneau pour tous les groupes
-  void removeCreneau(MatiereID mat, int creneauIndex) {
+  /// [deleteCreneau] supprime le creneau pour tous les groupes
+  void deleteCreneau(MatiereID mat, int creneauIndex) {
     final l = _matieres[mat] ?? [];
     l.removeAt(creneauIndex);
+  }
+
+  /// [deleteSemaine] supprime la semaine pour tous les groupes
+  void deleteSemaine(MatiereID mat, int semaine) {
+    final l = _matieres[mat] ?? [];
+    l.removeWhere((cr) => cr.date.semaine == semaine);
   }
 
   /// toogleCreneau change l'état du créneau donné
@@ -367,6 +374,21 @@ class Colloscope {
       if (usePermuation) {
         permutatioOffset++;
       }
+    }
+  }
+
+  /// [repeteMotifCourant] repete [nombre] fois l'organisation courante,
+  /// pour la [matiere] donnée.
+  void repeteMotifCourant(MatiereID matiere, int nombre, {int? periode}) {
+    final l = _matieres[matiere] ?? [];
+    periode = periode ?? l.map((cr) => cr.date.semaine).fold<int>(0, max);
+    if (periode <= 0) {
+      return;
+    }
+    final pattern = l.map((e) => e).toList(); // copy to avoid side effects
+    for (var periodOffset = 1; periodOffset <= nombre; periodOffset++) {
+      l.addAll(pattern.map(
+          (cr) => cr._copyWithWeek(cr.date.semaine + periodOffset * periode!)));
     }
   }
 }
@@ -429,6 +451,14 @@ class _PopulatedCreneau {
   @override
   int get hashCode =>
       date.hashCode + groupeID.hashCode + colleur.hashCode + notes.hashCode;
+
+  _PopulatedCreneau _copyWithWeek(int semaine) {
+    return _PopulatedCreneau(
+        DateHeure(semaine, date.weekday, date.hour, date.minute),
+        groupeID,
+        colleur,
+        notes: notes);
+  }
 }
 
 class PopulatedCreneau {
