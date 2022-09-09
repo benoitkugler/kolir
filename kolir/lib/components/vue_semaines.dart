@@ -4,7 +4,7 @@ import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-class VueSemaineW extends StatelessWidget {
+class VueSemaineW extends StatefulWidget {
   final MatiereProvider matieresList;
   final int creneauxVaccants;
   final List<SemaineTo<VueSemaine>> semaines;
@@ -13,31 +13,48 @@ class VueSemaineW extends StatelessWidget {
       {super.key});
 
   @override
+  State<VueSemaineW> createState() => _VueSemaineWState();
+}
+
+class _VueSemaineWState extends State<VueSemaineW> {
+  GroupeID? hoveredGroupe;
+
+  @override
   Widget build(BuildContext context) {
-    final plural = creneauxVaccants > 1;
+    final plural = widget.creneauxVaccants > 1;
     return VueSkeleton(
         mode: ModeView.semaines,
         actions: [
           Card(
-            color: creneauxVaccants > 0
+            color: widget.creneauxVaccants > 0
                 ? Colors.orange.shade400
                 : Colors.greenAccent,
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(creneauxVaccants > 0
-                  ? "$creneauxVaccants créneau${plural ? 'x' : ''} vaccant${plural ? 's' : ''}"
+              child: Text(widget.creneauxVaccants > 0
+                  ? "${widget.creneauxVaccants} créneau${plural ? 'x' : ''} vaccant${plural ? 's' : ''}"
                   : "Tous les créneaux sont attribués."),
             ),
           )
         ],
-        child: Expanded(
-          child: SingleChildScrollView(
-            child: SemaineList(
-              semaines
-                  .map((e) =>
-                      SemaineTo(e.semaine, _SemaineBody(matieresList, e.item)))
-                  .toList(),
-              "Aucune colle n'est prévue.",
+        child: NotificationListener<_NotifHover>(
+          onNotification: (notification) {
+            setState(() {
+              hoveredGroupe = notification.groupe;
+            });
+            return true;
+          },
+          child: Expanded(
+            child: SingleChildScrollView(
+              child: SemaineList(
+                widget.semaines
+                    .map((e) => SemaineTo(
+                        e.semaine,
+                        _SemaineBody(
+                            widget.matieresList, e.item, hoveredGroupe)))
+                    .toList(),
+                "Aucune colle n'est prévue.",
+              ),
             ),
           ),
         ));
@@ -48,8 +65,10 @@ class VueSemaineW extends StatelessWidget {
 class _SemaineBody extends StatelessWidget {
   final MatiereProvider matieresList;
   final VueSemaine semaine;
+  final GroupeID? hoveredGroupe;
 
-  const _SemaineBody(this.matieresList, this.semaine, {super.key});
+  const _SemaineBody(this.matieresList, this.semaine, this.hoveredGroupe,
+      {super.key});
 
   List<List<PopulatedCreneau>> weekdayCreneaux(int weekday) {
     final forDay = semaine.values
@@ -76,7 +95,8 @@ class _SemaineBody extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: weekdays
-              .map((weekday) => _WeekdayW(weekday, weekdayCreneaux(weekday)))
+              .map((weekday) =>
+                  _WeekdayW(weekday, weekdayCreneaux(weekday), hoveredGroupe))
               .toList(),
         ),
       ),
@@ -87,7 +107,8 @@ class _SemaineBody extends StatelessWidget {
 class _WeekdayW extends StatelessWidget {
   final int weekday;
   final List<List<PopulatedCreneau>> creneaux;
-  const _WeekdayW(this.weekday, this.creneaux, {super.key});
+  final GroupeID? currentGroup;
+  const _WeekdayW(this.weekday, this.creneaux, this.currentGroup, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +133,10 @@ class _WeekdayW extends StatelessWidget {
           ...creneaux
               .map((creneauxParHeure) => Row(
                   children: creneauxParHeure
-                      .map((creneau) => _Group(creneau))
+                      .map((creneau) => _Group(
+                          creneau,
+                          creneau.groupe != null &&
+                              creneau.groupe?.id == currentGroup))
                       .toList()))
               .toList()
         ]),
@@ -121,26 +145,42 @@ class _WeekdayW extends StatelessWidget {
   }
 }
 
+class _NotifHover extends Notification {
+  final GroupeID? groupe;
+  _NotifHover(this.groupe);
+}
+
 class _Group extends StatelessWidget {
   final PopulatedCreneau creneau;
+  final bool isHighlighted;
 
-  const _Group(this.creneau, {super.key});
+  const _Group(this.creneau, this.isHighlighted, {super.key});
 
   @override
   Widget build(BuildContext context) {
     final group = creneau.groupe?.name ?? "?";
     final matiere = creneau.matiere;
-    return Tooltip(
-      message: "${matiere.format()} - ${creneau.colleur}",
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-              border: Border.all(color: matiere.color),
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
-              color: matiere.color.withOpacity(0.5)),
-          child: Text("${creneau.date.formatHeure()}  $group "),
+    return GestureDetector(
+      onTap: creneau.groupe != null
+          ? () => _NotifHover(isHighlighted ? null : creneau.groupe!.id)
+              .dispatch(context)
+          : null,
+      child: Tooltip(
+        message: "${matiere.format()} - ${creneau.colleur}",
+        child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+                border: Border.all(color: matiere.color),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                color: matiere.color.withOpacity(isHighlighted ? 0.6 : 0.5)),
+            child: Text(
+              "${creneau.date.formatHeure()}  $group ",
+              style:
+                  TextStyle(fontWeight: isHighlighted ? FontWeight.bold : null),
+            ),
+          ),
         ),
       ),
     );
