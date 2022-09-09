@@ -59,8 +59,8 @@ class _HomeState extends State<_Home> {
     try {
       col = await Colloscope.load();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Erreur pendant le chargement"),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Erreur pendant le chargement: $e"),
           backgroundColor: Colors.orange));
       col = Colloscope({}, []);
     }
@@ -115,6 +115,12 @@ class _HomeState extends State<_Home> {
   void removeGroupe(GroupeID groupe) {
     setState(() {
       currentColloscope.removeGroupe(groupe);
+    });
+  }
+
+  void clearGroupeCreneaux(GroupeID groupe) {
+    setState(() {
+      currentColloscope.clearGroupeCreneaux(groupe);
     });
   }
 
@@ -204,9 +210,12 @@ class _HomeState extends State<_Home> {
           currentColloscope.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
+          onClearGroupeCreneaux: clearGroupeCreneaux,
           onUpdateGroupeContraintes: updateGroupeContraintes,
           onToogleCreneau: toogleCreneau,
-          onAttribueCreneaux: attribueCreneaux,
+          onAttribueCyclique: attribueCreneaux,
+          checkAttributeCyclique: ((mat, groupes, semaines) =>
+              currentColloscope.checkAttribueCyclique(mat, groupes, semaines)),
         );
       case ModeView.matieres:
         return VueMatiereW(

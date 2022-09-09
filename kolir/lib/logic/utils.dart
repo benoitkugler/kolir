@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 const _days = [
   "",
   "Lun",
@@ -117,3 +119,46 @@ class DateHeure implements Comparable<DateHeure> {
     return DateHeure(newSemaine, weekday, hour, minute);
   }
 }
+
+typedef GroupeID = int;
+
+class Groupe {
+  final GroupeID id;
+  final List<DateHeure> creneauxInterdits;
+
+  const Groupe(this.id, {this.creneauxInterdits = const []});
+
+  String get name => "G$id";
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "creneauxInterdits": creneauxInterdits.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory Groupe.fromJson(dynamic json) {
+    return Groupe(json["id"] as int,
+        creneauxInterdits: (json["creneauxInterdits"] as List)
+            .map((e) => DateHeure.fromJson(e))
+            .toList());
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Groupe &&
+      other.runtimeType == runtimeType &&
+      other.id == id &&
+      other.creneauxInterdits.equals(creneauxInterdits);
+
+  @override
+  int get hashCode => id.hashCode + creneauxInterdits.hashCode;
+
+  /// tous les créneaux ont semaine = 1;
+  Set<DateHeure> constraintsSet() {
+    return creneauxInterdits.map((cr) => cr.copyWithWeek(1)).toSet();
+  }
+}
+
+Map<GroupeID, Groupe> groupeMap(List<Groupe> groupes) =>
+    Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));

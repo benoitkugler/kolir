@@ -19,21 +19,29 @@ class VueGroupeW extends StatefulWidget {
 
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
+  final void Function(GroupeID) onClearGroupeCreneaux;
   final void Function(GroupeID id, List<DateHeure> creneauxInterdits)
       onUpdateGroupeContraintes;
 
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
   final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
-      bool usePermutation) onAttribueCreneaux;
+      bool usePermutation) onAttribueCyclique;
+  final String Function(
+    MatiereID mat,
+    List<GroupeID> groupes,
+    List<int> semaines,
+  ) checkAttributeCyclique;
 
   const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
+      required this.onClearGroupeCreneaux,
       required this.onUpdateGroupeContraintes,
       required this.onToogleCreneau,
-      required this.onAttribueCreneaux,
+      required this.onAttribueCyclique,
+      required this.checkAttributeCyclique,
       super.key});
 
   @override
@@ -89,6 +97,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                       widget.creneaux,
                       widget.diagnostics[gr.id],
                       () => widget.onRemoveGroupe(gr.id),
+                      () => widget.onClearGroupeCreneaux(gr.id),
                       (mat, creneauIndex) =>
                           widget.onToogleCreneau(gr.id, mat, creneauIndex),
                       (creneauxInterdits) => widget.onUpdateGroupeContraintes(
@@ -96,8 +105,13 @@ class _VueGroupeWState extends State<VueGroupeW> {
                     ))
                 .toList(),
           ),
-          secondChild: _Assistant(widget.matieresList, widget.groupes,
-              widget.creneaux, widget.onAttribueCreneaux),
+          secondChild: _Assistant(
+            widget.matieresList,
+            widget.groupes,
+            widget.creneaux,
+            widget.onAttribueCyclique,
+            widget.checkAttributeCyclique,
+          ),
         ),
       ),
     );
@@ -133,6 +147,7 @@ class _GroupeW extends StatefulWidget {
   final Diagnostic? diagnostic;
 
   final void Function() onRemove;
+  final void Function() onClearCreneaux;
   final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
   final void Function(List<DateHeure> creneauxInterdits)
       onUpdateGroupeContraintes;
@@ -145,6 +160,7 @@ class _GroupeW extends StatefulWidget {
       this.creneaux,
       this.diagnostic,
       this.onRemove,
+      this.onClearCreneaux,
       this.onToogleCreneau,
       this.onUpdateGroupeContraintes,
       {super.key});
@@ -224,6 +240,15 @@ class _GroupeWState extends State<_GroupeW> {
                   }),
                   icon: Icon(isInEdit ? Icons.done : Icons.create_rounded),
                   color: isInEdit ? Colors.green : null,
+                ),
+              ),
+              Tooltip(
+                message: "Supprimer tous les créneaux affectés au groupe",
+                child: IconButton(
+                  splashRadius: 20,
+                  onPressed: widget.onClearCreneaux,
+                  icon: const Icon(Icons.clear),
+                  color: Colors.orange,
                 ),
               ),
               Text(
@@ -471,7 +496,7 @@ class _DiagnosticW extends StatelessWidget {
                 .map((ch) => Padding(
                       padding: itemPadding,
                       child: Text(
-                          "${ch.debut.date.formatDateHeure()} (${ch.debut.matiere.format(dense: true)}) - ${ch.fin.date.formatDateHeure()} (${ch.fin.matiere.format(dense: true)})"),
+                          "S${ch.debut.date.semaine} ${ch.debut.date.formatDateHeure()} (${ch.debut.matiere.format(dense: true)}) - ${ch.fin.date.formatDateHeure()} (${ch.fin.matiere.format(dense: true)})"),
                     ))
                 .toList()),
       // contraintes non respectées
@@ -507,9 +532,14 @@ class _Assistant extends StatelessWidget {
 
   final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribue;
+  final String Function(
+    MatiereID mat,
+    List<GroupeID> groupes,
+    List<int> semaines,
+  ) checkAttribue;
 
-  const _Assistant(
-      this.matieresList, this.groupes, this.creneaux, this.onAttribue,
+  const _Assistant(this.matieresList, this.groupes, this.creneaux,
+      this.onAttribue, this.checkAttribue,
       {super.key});
 
   @override
@@ -521,6 +551,7 @@ class _Assistant extends StatelessWidget {
               groupes,
               creneaux[mat] ?? [],
               (groupes, semaines, p) => onAttribue(mat, groupes, semaines, p),
+              (groupes, semaines) => checkAttribue(mat, groupes, semaines),
             ));
   }
 }
@@ -533,9 +564,11 @@ class _AssistantMatiere extends StatefulWidget {
   final void Function(
           List<GroupeID> groupes, List<int> semaines, bool usePermutation)
       onAttribue;
+  final String Function(List<GroupeID> groupes, List<int> semaines)
+      checkAttribue;
 
-  const _AssistantMatiere(
-      this.matiere, this.groupes, this.creneaux, this.onAttribue,
+  const _AssistantMatiere(this.matiere, this.groupes, this.creneaux,
+      this.onAttribue, this.checkAttribue,
       {super.key});
 
   @override
@@ -557,6 +590,27 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   void _onAttribue() {
     final groupes = selectedGroupes.toList();
     groupes.sort();
+
+    final error = widget.checkAttribue(groupes, selectedSemaines.toList());
+    if (error.isNotEmpty) {
+      showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                        "Les contraintes des groupes ne peuvent pas être résolues."),
+                    Text(
+                      error,
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    )
+                  ],
+                ),
+              ));
+      return;
+    }
+
     widget.onAttribue(groupes, selectedSemaines.toList(), usePermutation);
     setState(() {
       selectedGroupes.clear();
@@ -568,13 +622,18 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     if (selectedGroupes.isEmpty || selectedSemaines.isEmpty) {
       return false;
     }
-    // pour simplifier on impose l'égalite entre le
-    // nombre de groupe et de créneaux
+    // pour simplifier on impose l'égalite entre le nombre de
+    // créneaux de chaque semaine
+    final nbFirstWeek = widget.creneaux
+        .singleWhere((s) => s.semaine == selectedSemaines.first) // first week
+        .item
+        .length;
     return selectedSemaines.every((semaineIndex) {
-      final creneaux =
-          widget.creneaux.where((s) => s.semaine == semaineIndex).first.item;
-      return creneaux.where((cr) => cr.groupe == null).length ==
-          selectedGroupes.length;
+      final nbWeek = widget.creneaux
+          .singleWhere((s) => s.semaine == semaineIndex) // week
+          .item
+          .length;
+      return nbFirstWeek == nbWeek;
     });
   }
 
@@ -633,7 +692,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
           Flexible(
             child: CheckboxListTile(
                 title: const Text(
-                    "Appliquer une permutation circulaire d'une semaine à l'autre"),
+                    "Appliquer une permutation d'une semaine à l'autre"),
                 value: usePermutation,
                 onChanged: (value) => setState(() {
                       usePermutation = value!;

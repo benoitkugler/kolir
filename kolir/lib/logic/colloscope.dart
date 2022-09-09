@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:kolir/logic/rotations.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 import 'package:path/path.dart';
@@ -30,41 +31,13 @@ class Diagnostic {
 
   /// index des semaines en surcharges
   final List<int> semainesChargees;
+
+  // /// les matières pour lesquelles le nombre de colle par groupe
+  // /// n'est pas constant
+  // final List<Matiere> matiereNonEquilibrees;
+
   const Diagnostic(this.collisions, this.chevauchements, this.contraintes,
       this.semainesChargees);
-}
-
-typedef GroupeID = int;
-
-class Groupe {
-  final GroupeID id;
-  final List<DateHeure> creneauxInterdits;
-
-  const Groupe(this.id, {this.creneauxInterdits = const []});
-
-  String get name => "G$id";
-
-  Map<String, dynamic> toJson() {
-    return {
-      "id": id,
-      "creneauxInterdits": creneauxInterdits.map((e) => e.toJson()).toList(),
-    };
-  }
-
-  factory Groupe.fromJson(dynamic json) {
-    return Groupe(json["id"] as int,
-        creneauxInterdits: json["creneauxInterdits"] ?? []);
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is Groupe &&
-      other.runtimeType == runtimeType &&
-      other.id == id &&
-      other.creneauxInterdits.equals(creneauxInterdits);
-
-  @override
-  int get hashCode => id.hashCode + creneauxInterdits.hashCode;
 }
 
 bool _areMatieresEqual(
@@ -187,16 +160,19 @@ class Colloscope {
     return Colloscope.fromJson(jsonDecode(contents));
   }
 
-  Map<GroupeID, Groupe> get _groupeMap =>
-      Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+  Map<GroupeID, Groupe> get _groupeMap => groupeMap(groupes);
   Map<MatiereID, Matiere> get _matiereMap =>
       Map.fromEntries(matieresList.values.map((e) => MapEntry(e.index, e)));
+
+  PopulatedCreneau _publy(
+      MatiereID matiere, int creneauIndex, _PopulatedCreneau creneau) {
+    return PopulatedCreneau(creneauIndex, creneau.date,
+        _groupeMap[creneau.groupeID], creneau.colleur, _matiereMap[matiere]!);
+  }
 
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
   List<SemaineTo<VueSemaine>> parSemaine() {
-    final matiereMap = _matiereMap;
-    final groupeMap = _groupeMap;
     final semaines = <int, Map<MatiereID, List<PopulatedCreneau>>>{};
     for (var item in _matieres.entries) {
       final matiere = item.key;
@@ -206,15 +182,27 @@ class Colloscope {
         final creneau = item.value[creneauIndex];
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => {});
         final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
-        groupesParMatiere.add(PopulatedCreneau(
-            creneauIndex,
-            creneau.date,
-            groupeMap[creneau.groupeID],
-            creneau.colleur,
-            matiereMap[matiere]!));
+        groupesParMatiere.add(_publy(matiere, creneauIndex, creneau));
       }
     }
     return _semaineMapToList(semaines);
+  }
+
+  Map<GroupeID, List<DateHeure>> _parGroupes() {
+    final out = <GroupeID, List<DateHeure>>{};
+    for (var element in _matieres.entries) {
+      for (var creneauIndex = 0;
+          creneauIndex < element.value.length;
+          creneauIndex++) {
+        final creneau = element.value[creneauIndex];
+        if (creneau.groupeID == null) {
+          continue;
+        }
+        final l = out.putIfAbsent(creneau.groupeID!, () => []);
+        l.add(creneau.date);
+      }
+    }
+    return out;
   }
 
   VueGroupe _groupeSemaines(GroupeID groupe) {
@@ -241,9 +229,6 @@ class Colloscope {
   }
 
   Map<MatiereID, VueMatiere> parMatiere() {
-    final matiereMap = _matiereMap;
-    final groupeMap = _groupeMap;
-
     return _matieres.map((matiere, creneaux) {
       final semaines = <int, List<PopulatedCreneau>>{};
       for (var creneauIndex = 0;
@@ -251,12 +236,7 @@ class Colloscope {
           creneauIndex++) {
         final creneau = creneaux[creneauIndex];
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => []);
-        semaine.add(PopulatedCreneau(
-            creneauIndex,
-            creneau.date,
-            groupeMap[creneau.groupeID],
-            creneau.colleur,
-            matiereMap[matiere]!));
+        semaine.add(_publy(matiere, creneauIndex, creneau));
       }
       // creneaux is already sorted
       return MapEntry(matiere, _semaineMapToList(semaines));
@@ -305,11 +285,10 @@ class Colloscope {
       }
 
       // contraintes de créneaux
-      final contraintesMap =
-          gm[group]!.creneauxInterdits.map((cr) => cr.copyWithWeek(1)).toSet();
+      final cs = gm[group]!.constraintsSet();
       final contraintes = parSemaine
-          .map((s) => s.item.where(
-              (colle) => contraintesMap.contains(colle.date.copyWithWeek(1))))
+          .map((s) =>
+              s.item.where((colle) => cs.contains(colle.date.copyWithWeek(1))))
           .fold(<Colle>[], (pr, el) => [...pr, ...el]);
 
       // surchage : on calcule le nombre moyen de colles par semaine
@@ -367,6 +346,11 @@ class Colloscope {
     groupes.removeWhere((gr) => gr.id == id);
 
     // properly cleanup
+    clearGroupeCreneaux(id);
+  }
+
+  /// clearGroupeCreneaux desaffecte les créneaux de [id]
+  void clearGroupeCreneaux(GroupeID id) {
     for (var l in _matieres.values) {
       for (var creneau in l.where((cr) => cr.groupeID == id)) {
         creneau.groupeID = null;
@@ -425,42 +409,67 @@ class Colloscope {
     cr.colleur = colleur;
   }
 
+  RotationParams _setupAttribueCyclique(
+      MatiereID matiere, List<GroupeID> selectedGroupes, List<int> semaines) {
+    final backupArray = (_matieres[matiere] ?? []);
+    final creneaux = List<PopulatedCreneau>.generate(
+        backupArray.length,
+        (creneauIndex) =>
+            _publy(matiere, creneauIndex, backupArray[creneauIndex]));
+
+    final parSemaine = semaines
+        .map((si) => SemaineTo(
+            si, creneaux.where((cr) => cr.date.semaine == si).toList()))
+        .toList();
+    final groupes = selectedGroupes.map((e) => _groupeMap[e]!).toList();
+
+    return RotationParams(parSemaine, groupes, _parGroupes());
+  }
+
+  String checkAttribueCyclique(
+      MatiereID matiere, List<GroupeID> selectedGroupes, List<int> semaines) {
+    final builder = _setupAttribueCyclique(matiere, selectedGroupes, semaines);
+    final out = builder.getRotations(true);
+    return out.error;
+  }
+
   /// [attribueCyclique] attribue les créneaux des semaines donnés aux
   /// groupes donnés.
   /// Pour simplifier, on suppose que le nombre de groupes correspond au nombre
   /// de créneaux disponibles.
-  void attribueCyclique(MatiereID matiere, List<GroupeID> groupes,
-      List<int> semaines, bool usePermuation) {
-    var permutatioOffset = 0;
-    final creneaux = _matieres[matiere] ?? [];
-    for (var semaineIndex in semaines) {
-      final creneauxSemaine = creneaux
-          .where((cr) => cr.date.semaine == semaineIndex && cr.groupeID == null)
-          .toList();
+  /// Les contraintes des groupes sont prises en compte de façon prioritaire.
+  void attribueCyclique(MatiereID matiere, List<GroupeID> selectedGroupes,
+      List<int> semaines, bool usePermutation) {
+    final backupArray = (_matieres[matiere] ?? []);
+    final builder = _setupAttribueCyclique(matiere, selectedGroupes, semaines);
 
-      final L = creneauxSemaine.length;
-      assert(L == groupes.length);
-      for (var i = 0; i < L; i++) {
-        final groupe = groupes[(permutatioOffset + i) % L];
-        creneauxSemaine[i].groupeID = groupe;
-      }
-
-      // apply the permutation if needed
-      if (usePermuation) {
-        permutatioOffset++;
+    final permutationParSemaine = builder
+        .getRotations(usePermutation)
+        .rotations; // checked by checkAttribueCyclique
+    // apply the selected permutations
+    for (var semaineIndex = 0;
+        semaineIndex < permutationParSemaine.length;
+        semaineIndex++) {
+      final crs = builder.creneauxParSemaine[semaineIndex].item;
+      final perm = permutationParSemaine[semaineIndex];
+      for (var i = 0; i < crs.length; i++) {
+        final backupIndex = crs[i].index;
+        backupArray[backupIndex].groupeID = perm[i];
       }
     }
   }
 
   /// [repeteMotifCourant] repete [nombre] fois l'organisation courante,
-  /// pour la [matiere] donnée.
+  /// pour la [matiere] donnée, sans copier les attributions.
   void repeteMotifCourant(MatiereID matiere, int nombre, {int? periode}) {
     final l = _matieres[matiere] ?? [];
     periode = periode ?? l.map((cr) => cr.date.semaine).fold<int>(0, max);
     if (periode <= 0) {
       return;
     }
-    final pattern = l.map((e) => e).toList(); // copy to avoid side effects
+    final pattern = l
+        .map((e) => _PopulatedCreneau(e.date, null, e.colleur))
+        .toList(); // copy to avoid side effects
     for (var periodOffset = 1; periodOffset <= nombre; periodOffset++) {
       l.addAll(pattern.map(
           (cr) => cr._copyWithWeek(cr.date.semaine + periodOffset * periode!)));

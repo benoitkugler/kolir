@@ -6,6 +6,8 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/rotations.dart';
+import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
 final sample = Colloscope({}, const [Groupe(1), Groupe(2), Groupe(3)]);
@@ -48,5 +50,10 @@ void main() {
     ]);
     final path = await saveDocument(html, "semaines.html");
     print("Saved in $path");
+  });
+
+  test("Permutations", () {
+    print(generatePermutations([1, 2, 3, 4]));
+    print(generatePermutations([1, 2, 3, 4]).length);
   });
 }
