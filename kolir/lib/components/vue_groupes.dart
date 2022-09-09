@@ -313,12 +313,14 @@ class _DiagnosticW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const itemPadding = EdgeInsets.symmetric(vertical: 2.0);
     return Card(
       color: colorWarning,
       child: Padding(
           padding: const EdgeInsets.all(12.0),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // collisions
             if (diagnostic.collisions.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.only(bottom: 8.0),
@@ -326,11 +328,25 @@ class _DiagnosticW extends StatelessWidget {
               ),
             ...diagnostic.collisions.entries
                 .map((item) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      padding: itemPadding,
                       child: Text(
                           "S${item.key.semaine} ${item.key.formatDateHeure()} (${item.value.map((m) => m.format(dense: true)).join(' et ')})"),
                     ))
                 .toList(),
+            // chevauchements
+            if (diagnostic.chevauchements.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Text("Créneaux en chevauchements :"),
+              ),
+            ...diagnostic.chevauchements
+                .map((ch) => Padding(
+                      padding: itemPadding,
+                      child: Text(
+                          "${ch.debut.date.formatDateHeure()} (${ch.debut.matiere.format(dense: true)}) - ${ch.fin.date.formatDateHeure()} (${ch.fin.matiere.format(dense: true)})"),
+                    ))
+                .toList(),
+            // surcharges
             if (diagnostic.semainesChargees.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -338,7 +354,7 @@ class _DiagnosticW extends StatelessWidget {
               ),
             ...diagnostic.semainesChargees
                 .map((item) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      padding: itemPadding,
                       child: Text("Semaine $item"),
                     ))
                 .toList(),

@@ -105,4 +105,11 @@ class DateHeure implements Comparable<DateHeure> {
     }
     return "${formatWeekday(weekday)} à ${_formatHeure(hour, minute)}";
   }
+
+  /// [toDateTime] returns the [DateTime] with base year 2000
+  /// beware that it does not preserve weekdays
+  DateTime toDateTime() {
+    return DateTime(2000).add(
+        Duration(days: 7 * semaine + weekday, hours: hour, minutes: minute));
+  }
 }

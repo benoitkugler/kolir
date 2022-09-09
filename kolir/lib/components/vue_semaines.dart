@@ -102,12 +102,12 @@ class _WeekdayW extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Text(formatWeekday(weekday, dense: false),
-                style: TextStyle(fontSize: 16)),
+                style: const TextStyle(fontSize: 16)),
           ),
           if (creneaux.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: const Text("Aucune colle."),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("Aucune colle."),
             ),
           ...creneaux
               .map((creneauxParHeure) => Row(

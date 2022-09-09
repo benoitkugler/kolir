@@ -86,12 +86,16 @@ const defautHoraires = CreneauHoraireProvider([
 typedef MatiereID = int;
 
 class Matiere {
-  /// [index] is the id of the enum value.
+  /// [index] est l'identifiant unique
   final MatiereID index;
   final String name;
   final String shortName;
   final Color color;
-  const Matiere(this.index, this.name, this.shortName, this.color);
+
+  /// [colleDuree] est la durée d'une colle, en minute
+  final int colleDuree;
+  const Matiere(this.index, this.name, this.shortName, this.color,
+      {this.colleDuree = 55});
 
   String format({bool dense = false}) {
     return dense ? shortName : name;
@@ -103,6 +107,7 @@ class Matiere {
       "name": name,
       "shortName": shortName,
       "color": color.value,
+      "colleDuree": colleDuree,
     };
   }
 
@@ -112,6 +117,7 @@ class Matiere {
       json["name"],
       json["shortName"],
       Color(json["color"] as int),
+      colleDuree: json["colleDuree"] ?? 55,
     );
   }
 
@@ -122,11 +128,16 @@ class Matiere {
       other.index == index &&
       other.name == name &&
       other.shortName == shortName &&
-      other.color.value == color.value;
+      other.color.value == color.value &&
+      other.colleDuree == colleDuree;
 
   @override
   int get hashCode =>
-      index.hashCode + name.hashCode + shortName.hashCode + color.hashCode;
+      index.hashCode +
+      name.hashCode +
+      shortName.hashCode +
+      color.hashCode +
+      colleDuree.hashCode;
 }
 
 class MatiereProvider {
@@ -153,7 +164,8 @@ class MatiereProvider {
 
 const defautMatieres = MatiereProvider([
   Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1)),
-  Matiere(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7)),
+  Matiere(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7),
+      colleDuree: 80),
   Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
   Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176)),
   Matiere(4, "Espagnol", "Espa.", Color(0xFFF06292)),

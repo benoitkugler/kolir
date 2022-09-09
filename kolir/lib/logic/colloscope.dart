@@ -10,15 +10,23 @@ import 'package:path_provider/path_provider.dart';
 
 typedef Collisions = Map<DateHeure, List<Matiere>>;
 
+class Chevauchement {
+  final Colle debut;
+  final Colle fin;
+  const Chevauchement(this.debut, this.fin);
+}
+
 /// [Diagnostic] indique les problèmes de la répartition courante,
 /// pour un groupe.
 class Diagnostic {
   /// (au moins) deux créneaux en même temps.
   final Collisions collisions;
 
-  /// semaine public
+  final List<Chevauchement> chevauchements;
+
+  /// index des semaines en surcharges
   final List<int> semainesChargees;
-  const Diagnostic(this.collisions, this.semainesChargees);
+  const Diagnostic(this.collisions, this.chevauchements, this.semainesChargees);
 }
 
 typedef GroupeID = int;
@@ -45,7 +53,7 @@ class Groupe {
   int get hashCode => id;
 }
 
-bool areMatieresEqual(
+bool _areMatieresEqual(
     Map<MatiereID, _Creneaux> m1, Map<MatiereID, _Creneaux> m2) {
   if (m1.length != m2.length) {
     return false;
@@ -104,7 +112,7 @@ class Colloscope {
   }
 
   bool isEqual(Colloscope other) =>
-      areMatieresEqual(other._matieres, _matieres) &&
+      _areMatieresEqual(other._matieres, _matieres) &&
       other.groupes.equals(groupes) &&
       other.creneauxHoraires.equals(creneauxHoraires) &&
       other.matieresList.equals(matieresList) &&
@@ -240,16 +248,37 @@ class Colloscope {
       final group = item.key;
       final parSemaine = item.value;
 
-      // collisions
+      // collisions directes
       final parCreneau = <DateHeure, List<Matiere>>{};
-      for (var crs in parSemaine) {
-        for (var cr in crs.item) {
+      for (var semaine in parSemaine) {
+        for (var cr in semaine.item) {
           final l = parCreneau.putIfAbsent(cr.date, () => []);
           l.add(cr.matiere);
         }
       }
       final collisions =
           parCreneau.entries.where((element) => element.value.length > 1);
+
+      final List<Chevauchement> chevauchements = [];
+      // chevauchement pour les matières plus longues
+      for (var semaine in parSemaine) {
+        // sort by time
+        semaine.item.sort((a, b) => a.date.compareTo(b.date));
+        for (var i = 0; i < semaine.item.length; i++) {
+          if (i == semaine.item.length - 1) {
+            break;
+          }
+          final courant = semaine.item[i];
+          final suivant = semaine.item[i + 1];
+          final duree = courant.matiere.colleDuree;
+          if (courant.date
+              .toDateTime()
+              .add(Duration(minutes: duree))
+              .isAfter(suivant.date.toDateTime())) {
+            chevauchements.add(Chevauchement(courant, suivant));
+          }
+        }
+      }
 
       // surchage : on calcule le nombre moyen de colles par semaine
       final nbColles = parSemaine.isEmpty
@@ -265,9 +294,11 @@ class Colloscope {
           .map((s) => s.semaine)
           .toList();
 
-      if (collisions.isNotEmpty || semainesChargees.isNotEmpty) {
-        out[group] =
-            Diagnostic(Collisions.fromEntries(collisions), semainesChargees);
+      if (collisions.isNotEmpty ||
+          semainesChargees.isNotEmpty ||
+          chevauchements.isNotEmpty) {
+        out[group] = Diagnostic(Collisions.fromEntries(collisions),
+            chevauchements, semainesChargees);
       }
     }
     return out;
