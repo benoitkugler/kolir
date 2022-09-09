@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
+import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
+import 'package:kolir/logic/utils.dart';
 
 typedef Creneaux = Map<MatiereID, VueMatiere>;
 
 final colorWarning = Colors.deepOrange.shade300;
 
 class VueGroupeW extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
   final MatiereProvider matieresList;
   final List<Groupe> groupes;
   final Map<GroupeID, VueGroupe> colles;
@@ -16,16 +19,19 @@ class VueGroupeW extends StatefulWidget {
 
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
+  final void Function(GroupeID id, List<DateHeure> creneauxInterdits)
+      onUpdateGroupeContraintes;
 
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
   final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
       bool usePermutation) onAttribueCreneaux;
 
-  const VueGroupeW(this.matieresList, this.groupes, this.colles,
+  const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
       required this.onRemoveGroupe,
+      required this.onUpdateGroupeContraintes,
       required this.onToogleCreneau,
       required this.onAttribueCreneaux,
       super.key});
@@ -78,6 +84,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                   shrinkWrap: true,
                   children: widget.groupes
                       .map((gr) => _GroupeW(
+                            widget.horaires,
                             widget.matieresList,
                             gr,
                             widget.colles[gr.id] ?? [],
@@ -86,6 +93,9 @@ class _VueGroupeWState extends State<VueGroupeW> {
                             () => widget.onRemoveGroupe(gr.id),
                             (mat, creneauIndex) => widget.onToogleCreneau(
                                 gr.id, mat, creneauIndex),
+                            (creneauxInterdits) =>
+                                widget.onUpdateGroupeContraintes(
+                                    gr.id, creneauxInterdits),
                           ))
                       .toList(),
                 ),
@@ -121,6 +131,7 @@ class _DiagnosticAlert extends StatelessWidget {
 }
 
 class _GroupeW extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
   final MatiereProvider matieresList;
   final Groupe groupe;
   final VueGroupe semaines;
@@ -129,9 +140,19 @@ class _GroupeW extends StatefulWidget {
 
   final void Function() onRemove;
   final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
+  final void Function(List<DateHeure> creneauxInterdits)
+      onUpdateGroupeContraintes;
 
-  const _GroupeW(this.matieresList, this.groupe, this.semaines, this.creneaux,
-      this.diagnostic, this.onRemove, this.onToogleCreneau,
+  const _GroupeW(
+      this.horaires,
+      this.matieresList,
+      this.groupe,
+      this.semaines,
+      this.creneaux,
+      this.diagnostic,
+      this.onRemove,
+      this.onToogleCreneau,
+      this.onUpdateGroupeContraintes,
       {super.key});
 
   @override
@@ -142,11 +163,21 @@ class _GroupeWState extends State<_GroupeW> {
   bool isInEdit = false;
 
   void showEditContraintes() async {
-    final ok = await showDialog(
+    final allCreneaux = widget.creneaux.values
+        .map((l) => l
+            .map((se) => se.item.map((cr) => cr.date))
+            .fold(<DateHeure>[], (pv, e) => [...pv, ...e]))
+        .fold(<DateHeure>[], (pv, e) => [...pv, ...e])
+        .map((e) => e.copyWithWeek(1)) // erase week information
+        .toSet()
+        .toList();
+    final newContraintes = await showDialog<List<DateHeure>>(
         context: context,
-        builder: (context) => AlertDialog(
-              title: const Text("Confirmer"),
-            ));
+        builder: (context) => _EditContraintes(
+            widget.horaires, allCreneaux, widget.groupe.creneauxInterdits));
+    if (newContraintes != null) {
+      widget.onUpdateGroupeContraintes(newContraintes);
+    }
   }
 
   @override
@@ -213,6 +244,53 @@ class _GroupeWState extends State<_GroupeW> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EditContraintes extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
+  final List<DateHeure> collesCreneaux;
+  final List<DateHeure> initialesContraintes;
+
+  const _EditContraintes(
+      this.horaires, this.collesCreneaux, this.initialesContraintes,
+      {super.key});
+
+  @override
+  State<_EditContraintes> createState() => __EditContraintesState();
+}
+
+class __EditContraintesState extends State<_EditContraintes> {
+  var ct = CreneauxController(false);
+
+  @override
+  void initState() {
+    ct.creneaux = widget.initialesContraintes.toList();
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    ct.creneaux = widget.initialesContraintes.toList();
+    super.didChangeDependencies();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Editer les contraintes horaires"),
+      actions: [
+        ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(ct.creneaux),
+            child: const Text("Enregistrer les contraintes"))
+      ],
+      content: WeekCalendar(
+        widget.horaires,
+        ct,
+        placeholders: widget.collesCreneaux,
+        activeCreneauColor: Colors.limeAccent,
       ),
     );
   }

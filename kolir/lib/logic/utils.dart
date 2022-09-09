@@ -112,4 +112,8 @@ class DateHeure implements Comparable<DateHeure> {
     return DateTime(2000).add(
         Duration(days: 7 * semaine + weekday, hours: hour, minutes: minute));
   }
+
+  DateHeure copyWithWeek(int newSemaine) {
+    return DateHeure(newSemaine, weekday, hour, minute);
+  }
 }

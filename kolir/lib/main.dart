@@ -118,6 +118,12 @@ class _HomeState extends State<_Home> {
     });
   }
 
+  void updateGroupeContraintes(GroupeID id, List<DateHeure> contraintes) {
+    setState(() {
+      currentColloscope.updateGroupeContraintes(id, contraintes);
+    });
+  }
+
   void addCreneaux(MatiereID mat, List<DateHeure> hours, List<int> semaines,
       String colleur) {
     setState(() {
@@ -190,6 +196,7 @@ class _HomeState extends State<_Home> {
             currentColloscope.parSemaine());
       case ModeView.groupes:
         return VueGroupeW(
+          currentColloscope.creneauxHoraires,
           currentColloscope.matieresList,
           currentColloscope.groupes,
           currentColloscope.parGroupe(),
@@ -197,6 +204,7 @@ class _HomeState extends State<_Home> {
           currentColloscope.parMatiere(),
           onAddGroupe: addGroupe,
           onRemoveGroupe: removeGroupe,
+          onUpdateGroupeContraintes: updateGroupeContraintes,
           onToogleCreneau: toogleCreneau,
           onAttribueCreneaux: attribueCreneaux,
         );

@@ -146,15 +146,16 @@ class _MatiereW extends StatelessWidget {
   void showAddCreneaux(BuildContext context) {
     showDialog(
         context: context,
-        builder: (context) {
-          return AssistantCreneaux(
-            horaires,
-            (creneaux, semaines, colleur) {
-              Navigator.of(context).pop();
-              onAdd(creneaux, semaines, colleur);
-            },
-          );
-        });
+        builder: (context) => AlertDialog(
+              title: const Text("Ajouter des créneaux"),
+              content: AssistantCreneaux(
+                horaires,
+                (creneaux, semaines, colleur) {
+                  Navigator.of(context).pop();
+                  onAdd(creneaux, semaines, colleur);
+                },
+              ),
+            ));
   }
 
   void showDuplicate(BuildContext context) async {

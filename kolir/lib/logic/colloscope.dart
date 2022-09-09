@@ -113,7 +113,7 @@ class Colloscope {
   Colloscope copy() {
     return Colloscope(
       _matieres.map((k, v) => MapEntry(k, v.map((e) => e.copy()).toList())),
-      groupes.map((e) => e).toList(),
+      groupes.toList(),
       creneauxHoraires: creneauxHoraires.copy(),
       matieresList: matieresList.copy(),
       notes: notes,
@@ -350,6 +350,11 @@ class Colloscope {
     }
   }
 
+  void updateGroupeContraintes(GroupeID id, List<DateHeure> contraintes) {
+    final index = groupes.indexWhere((element) => element.id == id);
+    groupes[index] = Groupe(id, creneauxInterdits: contraintes);
+  }
+
   /// [addCreneaux] ajoute les heures données comme non
   /// affectées, dupliquant et adaptant la liste pour chaque semaine
   /// demandée
@@ -499,10 +504,7 @@ class _PopulatedCreneau {
       date.hashCode + groupeID.hashCode + colleur.hashCode + notes.hashCode;
 
   _PopulatedCreneau _copyWithWeek(int semaine) {
-    return _PopulatedCreneau(
-        DateHeure(semaine, date.weekday, date.hour, date.minute),
-        groupeID,
-        colleur,
+    return _PopulatedCreneau(date.copyWithWeek(semaine), groupeID, colleur,
         notes: notes);
   }
 }

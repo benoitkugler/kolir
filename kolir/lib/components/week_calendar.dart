@@ -4,6 +4,147 @@ import 'package:flutter/material.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
+class CreneauxController {
+  final bool enableDuplicateCreneau;
+  List<DateHeure> creneaux = [];
+  CreneauxController(this.enableDuplicateCreneau);
+
+  void remove(DateHeure creneau) {
+    creneaux.remove(creneau);
+  }
+
+  void add(DateHeure creneau) {
+    if (!enableDuplicateCreneau && creneaux.contains(creneau)) {
+      return;
+    }
+    creneaux.add(creneau);
+  }
+}
+
+class WeekCalendar extends StatefulWidget {
+  final CreneauHoraireProvider creneauxHoraires;
+  final CreneauxController controller;
+
+  final List<DateHeure> placeholders;
+
+  final Color activeCreneauColor;
+
+  const WeekCalendar(this.creneauxHoraires, this.controller,
+      {super.key,
+      this.placeholders = const [],
+      this.activeCreneauColor = Colors.lightBlue});
+
+  @override
+  State<WeekCalendar> createState() => _WeekCalendarState();
+}
+
+class _WeekCalendarState extends State<WeekCalendar> {
+  bool showSamedi = false;
+
+  void removeCreneau(DateHeure creneau) {
+    setState(() {
+      widget.controller.remove(creneau);
+    });
+  }
+
+  void addCreneau(DateHeure creneau) {
+    setState(() {
+      widget.controller.add(creneau);
+    });
+  }
+
+  List<DateHeure> creneauxForDay(int weekday) =>
+      widget.controller.creneaux.where((dt) => dt.weekday == weekday).toList();
+
+  List<DateHeure> placeholdersForDay(int weekday) =>
+      widget.placeholders.where((dt) => dt.weekday == weekday).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Horaires(widget.creneauxHoraires),
+            _Day(
+              widget.creneauxHoraires,
+              1,
+              creneauxForDay(1),
+              placeholdersForDay(1),
+              widget.activeCreneauColor,
+              removeCreneau,
+              addCreneau,
+            ),
+            _Day(
+              widget.creneauxHoraires,
+              2,
+              creneauxForDay(2),
+              placeholdersForDay(2),
+              widget.activeCreneauColor,
+              removeCreneau,
+              addCreneau,
+            ),
+            _Day(
+              widget.creneauxHoraires,
+              3,
+              creneauxForDay(3),
+              placeholdersForDay(3),
+              widget.activeCreneauColor,
+              removeCreneau,
+              addCreneau,
+            ),
+            _Day(
+              widget.creneauxHoraires,
+              4,
+              creneauxForDay(4),
+              placeholdersForDay(4),
+              widget.activeCreneauColor,
+              removeCreneau,
+              addCreneau,
+            ),
+            _Day(
+              widget.creneauxHoraires,
+              5,
+              creneauxForDay(5),
+              placeholdersForDay(5),
+              widget.activeCreneauColor,
+              removeCreneau,
+              addCreneau,
+            ),
+            if (showSamedi)
+              _Day(
+                widget.creneauxHoraires,
+                6,
+                creneauxForDay(6),
+                placeholdersForDay(6),
+                widget.activeCreneauColor,
+                removeCreneau,
+                addCreneau,
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: 300,
+          child: CheckboxListTile(
+              title: const Text("Afficher le samedi"),
+              value: showSamedi,
+              shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(4))),
+              onChanged: (b) => setState(() {
+                    showSamedi = b!;
+                  })),
+        ),
+      ],
+    );
+  }
+}
+
 class AssistantCreneaux extends StatefulWidget {
   final CreneauHoraireProvider creneauxHoraires;
 
@@ -17,35 +158,14 @@ class AssistantCreneaux extends StatefulWidget {
 }
 
 class _AssistantCreneauxState extends State<AssistantCreneaux> {
-  List<DateHeure> creneaux = [];
   var semainesController = TextEditingController();
   var colleurController = TextEditingController();
-
-  bool showSamedi = false;
+  var selectedCreneaux = CreneauxController(true);
 
   @override
   void initState() {
     semainesController.addListener(() => setState(() {}));
     super.initState();
-  }
-
-  void removeCreneau(DateHeure creneau) {
-    setState(() {
-      creneaux.remove(creneau);
-    });
-  }
-
-  void addCreneau(DateHeure creneau) {
-    setState(() {
-      creneaux.add(creneau);
-    });
-  }
-
-  void moveCreneau(DateHeure dst, DateHeure src) {
-    setState(() {
-      creneaux.remove(src);
-      creneaux.add(dst);
-    });
   }
 
   // returns an empty list for invalid values
@@ -76,133 +196,72 @@ class _AssistantCreneauxState extends State<AssistantCreneaux> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Horaires(widget.creneauxHoraires),
-                  _Day(
-                      widget.creneauxHoraires,
-                      1,
-                      creneaux.where((dt) => dt.weekday == 1).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
-                  _Day(
-                      widget.creneauxHoraires,
-                      2,
-                      creneaux.where((dt) => dt.weekday == 2).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
-                  _Day(
-                      widget.creneauxHoraires,
-                      3,
-                      creneaux.where((dt) => dt.weekday == 3).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
-                  _Day(
-                      widget.creneauxHoraires,
-                      4,
-                      creneaux.where((dt) => dt.weekday == 4).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
-                  _Day(
-                      widget.creneauxHoraires,
-                      5,
-                      creneaux.where((dt) => dt.weekday == 5).toList(),
-                      removeCreneau,
-                      addCreneau,
-                      moveCreneau),
-                  if (showSamedi)
-                    _Day(
-                        widget.creneauxHoraires,
-                        6,
-                        creneaux.where((dt) => dt.weekday == 6).toList(),
-                        removeCreneau,
-                        addCreneau,
-                        moveCreneau),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 300,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  // mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CheckboxListTile(
-                        title: const Text("Afficher le samedi"),
-                        value: showSamedi,
-                        onChanged: (b) => setState(() {
-                              showSamedi = b!;
-                            })),
-                    const SizedBox(height: 100),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: colleurController,
-                        decoration: const InputDecoration(
-                            label: Text("Colleur"),
-                            helperText:
-                                "Nom du colleur pour les créneaux choisis."),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: semainesController,
-                        decoration: const InputDecoration(
-                            label: Text("Semaines"),
-                            helperText: "Exemples: 1,3,5 ; 1-12"),
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-                    ElevatedButton(
-                        onPressed: semaines.isEmpty || creneaux.isEmpty
-                            ? null
-                            : () => widget.onAdd(
-                                creneaux, semaines, colleurController.text),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green),
-                        child: const Text("Ajouter")),
-                  ],
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        WeekCalendar(widget.creneauxHoraires, selectedCreneaux),
+        SizedBox(
+          width: 300,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: colleurController,
+                    decoration: const InputDecoration(
+                        label: Text("Colleur"),
+                        helperText:
+                            "Nom du colleur pour les créneaux choisis."),
+                  ),
                 ),
-              ),
-            )
-          ],
-        ),
-      ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: semainesController,
+                    decoration: const InputDecoration(
+                        label: Text("Semaines"),
+                        helperText: "Exemples: 1,3,5 ; 1-12"),
+                  ),
+                ),
+                const SizedBox(height: 50),
+                ElevatedButton(
+                    onPressed:
+                        semaines.isEmpty || selectedCreneaux.creneaux.isEmpty
+                            ? null
+                            : () => widget.onAdd(selectedCreneaux.creneaux,
+                                semaines, colleurController.text),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text("Ajouter")),
+              ],
+            ),
+          ),
+        )
+      ],
     );
   }
 }
 
 const _totalHeight = 400.0;
-const _dayWidth = 100.0;
+const _dayWidth = 110.0;
 
 class _Day extends StatefulWidget {
   final CreneauHoraireProvider horaires;
 
   final int weekday;
   final List<DateHeure> creneaux;
+  final List<DateHeure> placeholders;
+
+  final Color creneauColor;
+
   final void Function(DateHeure) onRemove;
   final void Function(DateHeure) onAdd;
-  final void Function(DateHeure dst, DateHeure src) onMove;
 
-  const _Day(this.horaires, this.weekday, this.creneaux, this.onRemove,
-      this.onAdd, this.onMove,
+  const _Day(this.horaires, this.weekday, this.creneaux, this.placeholders,
+      this.creneauColor, this.onRemove, this.onAdd,
       {super.key});
 
   @override
@@ -253,6 +312,22 @@ class _DayState extends State<_Day> {
     }
   }
 
+  Positioned buildCreneau(DateHeure dt, bool asPlaceholder) {
+    final topRatio =
+        (dt.hour * 60 + dt.minute - _firstHour * 60) * _oneHourRatio / 60;
+    return Positioned(
+      left: 0,
+      top: topRatio * _totalHeight,
+      height: _oneHourHeight,
+      child: _CreneauW(
+          _oneHourHeight,
+          dt,
+          asPlaceholder ? null : () => widget.onRemove(dt),
+          asPlaceholder,
+          widget.creneauColor),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -285,20 +360,17 @@ class _DayState extends State<_Day> {
                           top: hoverTop,
                           height: _oneHourHeight,
                           child: _CreneauW(
-                              _oneHourHeight, fromHeight(hoverTop!), null)),
-                    ...widget.creneaux.map((e) {
-                      final topRatio =
-                          (e.hour * 60 + e.minute - _firstHour * 60) *
-                              _oneHourRatio /
-                              60;
-                      return Positioned(
-                        left: 0,
-                        top: topRatio * _totalHeight,
-                        height: _oneHourHeight,
-                        child: _CreneauW(
-                            _oneHourHeight, e, () => widget.onRemove(e)),
-                      );
-                    }).toList(),
+                              _oneHourHeight,
+                              fromHeight(hoverTop!),
+                              null,
+                              false,
+                              widget.creneauColor)),
+                    ...widget.placeholders
+                        .map((cr) => buildCreneau(cr, true))
+                        .toList(),
+                    ...widget.creneaux
+                        .map((cr) => buildCreneau(cr, false))
+                        .toList(),
                   ])),
             ),
           ),
@@ -312,8 +384,12 @@ class _CreneauW extends StatelessWidget {
   final double height;
   final DateHeure creneau;
   final void Function()? onRemove;
+  final bool asPlaceholder;
+  final Color color;
 
-  const _CreneauW(this.height, this.creneau, this.onRemove, {super.key});
+  const _CreneauW(
+      this.height, this.creneau, this.onRemove, this.asPlaceholder, this.color,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -321,21 +397,25 @@ class _CreneauW extends StatelessWidget {
       width: _dayWidth,
       height: height,
       decoration: BoxDecoration(
-          color: Colors.lightBlue.withOpacity(onRemove == null ? 0.2 : 0.5),
+          color: asPlaceholder
+              ? Colors.grey.withOpacity(0.2)
+              : color.withOpacity(onRemove == null ? 0.3 : 0.5),
           borderRadius: const BorderRadius.all(Radius.circular(6))),
       child: Row(children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Text(creneau.formatHeure()),
+          child: Text(creneau.formatHeure(),
+              style: TextStyle(color: asPlaceholder ? Colors.grey : null)),
         ),
         const Spacer(),
-        IconButton(
-          iconSize: 16,
-          splashRadius: 20,
-          onPressed: onRemove,
-          icon: const Icon(Icons.delete),
-          color: Colors.red,
-        )
+        if (onRemove != null)
+          IconButton(
+            iconSize: 20,
+            splashRadius: 20,
+            onPressed: onRemove,
+            icon: const Icon(Icons.clear),
+            color: Colors.red,
+          )
       ]),
     );
   }
