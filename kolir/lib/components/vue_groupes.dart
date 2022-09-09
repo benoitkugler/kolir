@@ -111,9 +111,9 @@ class _DiagnosticAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return const Card(
       color: colorWarning,
-      child: const Padding(
+      child: Padding(
         padding: EdgeInsets.all(12.0),
         child: Text(
           "Certains groupes requierent une attention.",
@@ -174,6 +174,13 @@ class _GroupeWState extends State<_GroupeW> {
     }
   }
 
+  String get resumeContraintes {
+    if (widget.groupe.creneauxInterdits.isEmpty) {
+      return "(Aucune contrainte)";
+    }
+    return "(${widget.groupe.creneauxInterdits.map((e) => e.formatDateHeure(dense: true)).join(" - ")})";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -193,7 +200,12 @@ class _GroupeWState extends State<_GroupeW> {
                 ),
               ),
               Tooltip(
-                message: "Ajouter ou modifier des contraintes horaires",
+                richMessage: TextSpan(children: [
+                  const TextSpan(text: "Modifier les contraintes horaires\n"),
+                  TextSpan(
+                      text: resumeContraintes,
+                      style: const TextStyle(fontStyle: FontStyle.italic)),
+                ]),
                 child: IconButton(
                   splashRadius: 20,
                   onPressed: showEditContraintes,
