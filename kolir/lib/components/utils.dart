@@ -52,17 +52,11 @@ class VueSkeleton extends StatelessWidget {
                         ViewNotification(ModeView.values[index])
                             .dispatch(context),
                     children: [
-                      _ViewChip(
-                          const IconData(0xe559, fontFamily: 'MaterialIcons'),
-                          ModeView.matieres.title,
+                      _ViewChip(Icons.school, ModeView.matieres.title,
                           "Visualiser le colloscope par matières"),
-                      _ViewChip(
-                          const IconData(0xe2eb, fontFamily: 'MaterialIcons'),
-                          ModeView.groupes.title,
+                      _ViewChip(Icons.group, ModeView.groupes.title,
                           "Visualiser le colloscope par groupes"),
-                      _ViewChip(
-                          const IconData(0xf06bb, fontFamily: 'MaterialIcons'),
-                          ModeView.semaines.title,
+                      _ViewChip(Icons.calendar_month, ModeView.semaines.title,
                           "Afficher une vue d'ensemble, par semaines"),
                     ]),
                 const Spacer(),
@@ -176,30 +170,22 @@ class _ColleWState extends State<ColleW> {
     colleurController.selection = TextSelection(
         baseOffset: 0, extentOffset: colleurController.text.length);
     final ok = await showDialog<bool>(
-        context: context,
-        builder: (context) => Dialog(
-                child: Card(
-                    child: SizedBox(
-              width: 300,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    "Modifier le colleur",
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                    autofocus: true,
-                    controller: colleurController,
-                    decoration: const InputDecoration(labelText: "Colleur")),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text("Valider")),
-                const SizedBox(height: 10),
-              ]),
-            ))));
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "Modifier le colleur",
+        ),
+        actions: [
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Valider"))
+        ],
+        content: TextFormField(
+            autofocus: true,
+            controller: colleurController,
+            decoration: const InputDecoration(labelText: "Colleur")),
+      ),
+    );
     if (ok != null) {
       widget.onEditColleur!(colleurController.text);
     }
@@ -250,15 +236,14 @@ class _ColleWState extends State<ColleW> {
                       PopupMenuItem(
                         onTap: widget.onDelete,
                         child: const ListTile(
-                          leading: Icon(clearIcon, color: Colors.red),
+                          leading: Icon(Icons.clear_rounded, color: Colors.red),
                           title: Text("Supprimer"),
                           horizontalTitleGap: 10,
                           minLeadingWidth: 0,
                         ),
                       )
                     ],
-                    icon: const Icon(
-                        IconData(0xe404, fontFamily: 'MaterialIcons')),
+                    icon: const Icon(Icons.more_vert),
                     splashRadius: 14,
                     tooltip: "Editer...",
                   )
@@ -268,12 +253,6 @@ class _ColleWState extends State<ColleW> {
     );
   }
 }
-
-const deleteIcon = Icon(
-  IconData(0xe1b9, fontFamily: 'MaterialIcons'),
-);
-
-const clearIcon = IconData(0xf645, fontFamily: 'MaterialIcons');
 
 /// [MatieresTabs] is a tab view, indexed by [MatiereID]
 class MatieresTabs extends StatefulWidget {

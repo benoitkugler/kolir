@@ -43,7 +43,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
       ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           onPressed: isInEdit ? null : widget.onAddGroupe,
-          icon: const Icon(IconData(0xe047, fontFamily: 'MaterialIcons')),
+          icon: const Icon(Icons.add),
           label: const Text("Ajouter un groupe")),
       const SizedBox(width: 10),
       Tooltip(
@@ -141,6 +141,14 @@ class _GroupeW extends StatefulWidget {
 class _GroupeWState extends State<_GroupeW> {
   bool isInEdit = false;
 
+  void showEditContraintes() async {
+    final ok = await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text("Confirmer"),
+            ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -154,9 +162,18 @@ class _GroupeWState extends State<_GroupeW> {
                 message: "Supprimer définitivement le groupe",
                 child: IconButton(
                   onPressed: widget.onRemove,
-                  icon: deleteIcon,
+                  icon: const Icon(Icons.delete),
                   splashRadius: 20,
                   color: Colors.red,
+                ),
+              ),
+              Tooltip(
+                message: "Ajouter ou modifier des contraintes horaires",
+                child: IconButton(
+                  splashRadius: 20,
+                  onPressed: showEditContraintes,
+                  icon: const Icon(Icons.event_busy),
+                  color: Colors.lime,
                 ),
               ),
               Tooltip(
@@ -168,9 +185,7 @@ class _GroupeWState extends State<_GroupeW> {
                   onPressed: () => setState(() {
                     isInEdit = !isInEdit;
                   }),
-                  icon: Icon(isInEdit
-                      ? const IconData(0xe1f6, fontFamily: 'MaterialIcons')
-                      : const IconData(0xf67a, fontFamily: 'MaterialIcons')),
+                  icon: Icon(isInEdit ? Icons.done : Icons.create_rounded),
                   color: isInEdit ? Colors.green : null,
                 ),
               ),

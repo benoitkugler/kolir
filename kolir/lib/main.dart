@@ -232,44 +232,19 @@ class _HomeState extends State<_Home> {
     final save = await showDialog<bool>(
         context: context,
         builder: (context) {
-          return Dialog(
-              child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Card(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            "Editer les notes",
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: TextFormField(
-                              controller: notesController,
-                              decoration: const InputDecoration(
-                                  label: Text("Notes libres")),
-                              maxLines: 10),
-                        ),
-                        Row(
-                          children: [
-                            const Spacer(),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ElevatedButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text("Enregistrer")),
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                  )));
+          return AlertDialog(
+              title: const Text("Editer les notes"),
+              actions: [
+                ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text("Enregistrer"))
+              ],
+              content: TextFormField(
+                  controller: notesController,
+                  decoration: const InputDecoration(
+                    label: Text("Notes libres"),
+                  ),
+                  maxLines: 15));
         });
     if (save != null && save) {
       _saveNotes();
@@ -310,15 +285,14 @@ class _HomeState extends State<_Home> {
               message: "Exporter le colloscope au format HTML.",
               child: ElevatedButton.icon(
                   onPressed: _export,
-                  icon:
-                      const Icon(IconData(0xe201, fontFamily: 'MaterialIcons')),
+                  icon: const Icon(Icons.download),
                   label: const Text("Exporter"))),
           Tooltip(
             message: "Sauvegarder le colloscope actuel sur le disque.",
             child: ElevatedButton.icon(
                 onPressed: isDirty ? _save : null,
                 icon: Icon(
-                  const IconData(0xe550, fontFamily: 'MaterialIcons'),
+                  Icons.save,
                   color: isDirty ? Colors.green : Colors.grey,
                 ),
                 label: const Text("Enregistrer")),
@@ -328,7 +302,7 @@ class _HomeState extends State<_Home> {
             child: ElevatedButton.icon(
                 onPressed: isDirty ? _reload : null,
                 icon: Icon(
-                  const IconData(0xf010a, fontFamily: 'MaterialIcons'),
+                  Icons.restore_page_rounded,
                   color: isDirty ? Colors.orange : Colors.grey,
                 ),
                 label: const Text("Annuler")),
@@ -338,15 +312,14 @@ class _HomeState extends State<_Home> {
             child: IconButton(
                 splashRadius: 15,
                 onPressed: _editNotes,
-                icon:
-                    const Icon(IconData(0xf030f, fontFamily: 'MaterialIcons'))),
+                icon: const Icon(Icons.edit_note_rounded)),
           ),
           Tooltip(
               message: "Vider entièrement le colloscope.",
               child: ElevatedButton.icon(
                   onPressed: _clear,
                   icon: const Icon(
-                    clearIcon,
+                    Icons.clear_rounded,
                     color: Colors.red,
                   ),
                   label: const Text("Effacer"))),

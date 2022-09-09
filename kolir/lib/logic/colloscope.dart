@@ -33,24 +33,33 @@ typedef GroupeID = int;
 
 class Groupe {
   final GroupeID id;
-  const Groupe(this.id);
+  final List<DateHeure> creneauxInterdits;
+
+  const Groupe(this.id, {this.creneauxInterdits = const []});
 
   String get name => "G$id";
 
-  int toJson() {
-    return id;
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "creneauxInterdits": creneauxInterdits.map((e) => e.toJson()).toList(),
+    };
   }
 
   factory Groupe.fromJson(dynamic json) {
-    return Groupe(json as int);
+    return Groupe(json["id"] as int,
+        creneauxInterdits: json["creneauxInterdits"] ?? []);
   }
 
   @override
   bool operator ==(Object other) =>
-      other is Groupe && other.runtimeType == runtimeType && other.id == id;
+      other is Groupe &&
+      other.runtimeType == runtimeType &&
+      other.id == id &&
+      other.creneauxInterdits.equals(creneauxInterdits);
 
   @override
-  int get hashCode => id;
+  int get hashCode => id.hashCode + creneauxInterdits.hashCode;
 }
 
 bool _areMatieresEqual(

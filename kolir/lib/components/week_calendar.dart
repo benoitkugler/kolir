@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:kolir/components/utils.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
@@ -334,7 +333,7 @@ class _CreneauW extends StatelessWidget {
           iconSize: 16,
           splashRadius: 20,
           onPressed: onRemove,
-          icon: deleteIcon,
+          icon: const Icon(Icons.delete),
           color: Colors.red,
         )
       ]),

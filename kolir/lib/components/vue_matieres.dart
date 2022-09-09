@@ -83,18 +83,19 @@ class __DuplicateDialogState extends State<_DuplicateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-        child: Card(
-            child: Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("Dupliquer", style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: 200,
-            child: TextFormField(
+    return AlertDialog(
+        title: const Text("Répéter le motif"),
+        actions: [
+          ElevatedButton(
+              onPressed: nbRepeat == null
+                  ? null
+                  : () => widget.onValid(nbRepeat!, periode),
+              child: const Text("Valider"))
+        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
               controller: repeatcontroller,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               keyboardType: TextInputType.number,
@@ -103,11 +104,8 @@ class __DuplicateDialogState extends State<_DuplicateDialog> {
                 contentPadding: EdgeInsets.only(bottom: 10),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: 200,
-            child: TextFormField(
+            const SizedBox(height: 10),
+            TextFormField(
               controller: periodeController,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               keyboardType: TextInputType.number,
@@ -116,16 +114,8 @@ class __DuplicateDialogState extends State<_DuplicateDialog> {
                 contentPadding: EdgeInsets.only(bottom: 10),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-              onPressed: nbRepeat == null
-                  ? null
-                  : () => widget.onValid(nbRepeat!, periode),
-              child: const Text("Valider"))
-        ],
-      ),
-    )));
+          ],
+        ));
   }
 }
 
@@ -221,7 +211,7 @@ class _MatiereW extends StatelessWidget {
                                   color: Colors.red,
                                   tooltip:
                                       "Supprimer les créneaux de la semaine ${semaine.semaine}",
-                                  icon: deleteIcon,
+                                  icon: const Icon(Icons.delete),
                                   onPressed: () =>
                                       onDeleteSemaine(semaine.semaine),
                                 ),
