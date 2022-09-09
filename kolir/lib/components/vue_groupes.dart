@@ -46,6 +46,10 @@ class _VueGroupeWState extends State<VueGroupeW> {
   @override
   Widget build(BuildContext context) {
     final actions = [
+      if (widget.diagnostics.isNotEmpty) ...[
+        _DiagnosticAlert(widget.diagnostics),
+        const SizedBox(width: 10),
+      ],
       ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           onPressed: isInEdit ? null : widget.onAddGroupe,
@@ -74,33 +78,23 @@ class _VueGroupeWState extends State<VueGroupeW> {
           duration: const Duration(milliseconds: 300),
           crossFadeState:
               isInEdit ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.diagnostics.isNotEmpty)
-                _DiagnosticAlert(widget.diagnostics),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: widget.groupes
-                      .map((gr) => _GroupeW(
-                            widget.horaires,
-                            widget.matieresList,
-                            gr,
-                            widget.colles[gr.id] ?? [],
-                            widget.creneaux,
-                            widget.diagnostics[gr.id],
-                            () => widget.onRemoveGroupe(gr.id),
-                            (mat, creneauIndex) => widget.onToogleCreneau(
-                                gr.id, mat, creneauIndex),
-                            (creneauxInterdits) =>
-                                widget.onUpdateGroupeContraintes(
-                                    gr.id, creneauxInterdits),
-                          ))
-                      .toList(),
-                ),
-              ),
-            ],
+          firstChild: ListView(
+            shrinkWrap: true,
+            children: widget.groupes
+                .map((gr) => _GroupeW(
+                      widget.horaires,
+                      widget.matieresList,
+                      gr,
+                      widget.colles[gr.id] ?? [],
+                      widget.creneaux,
+                      widget.diagnostics[gr.id],
+                      () => widget.onRemoveGroupe(gr.id),
+                      (mat, creneauIndex) =>
+                          widget.onToogleCreneau(gr.id, mat, creneauIndex),
+                      (creneauxInterdits) => widget.onUpdateGroupeContraintes(
+                          gr.id, creneauxInterdits),
+                    ))
+                .toList(),
           ),
           secondChild: _Assistant(widget.matieresList, widget.groupes,
               widget.creneaux, widget.onAttribueCreneaux),
@@ -286,11 +280,20 @@ class __EditContraintesState extends State<_EditContraintes> {
             onPressed: () => Navigator.of(context).pop(ct.creneaux),
             child: const Text("Enregistrer les contraintes"))
       ],
-      content: WeekCalendar(
-        widget.horaires,
-        ct,
-        placeholders: widget.collesCreneaux,
-        activeCreneauColor: Colors.limeAccent,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+              "Sélectionner les créneaux étant non disponibles pour le groupe.",
+              style: TextStyle(fontStyle: FontStyle.italic)),
+          const SizedBox(height: 10),
+          WeekCalendar(
+            widget.horaires,
+            ct,
+            placeholders: widget.collesCreneaux,
+            activeCreneauColor: Colors.limeAccent,
+          ),
+        ],
       ),
     );
   }
