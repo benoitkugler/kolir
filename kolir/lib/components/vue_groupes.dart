@@ -7,7 +7,7 @@ import 'package:kolir/logic/utils.dart';
 
 typedef Creneaux = Map<MatiereID, VueMatiere>;
 
-final colorWarning = Colors.deepOrange.shade300;
+const colorWarning = Colors.orangeAccent;
 
 class VueGroupeW extends StatefulWidget {
   final CreneauHoraireProvider horaires;
@@ -400,6 +400,35 @@ class _GroupEditMatiere extends StatelessWidget {
   }
 }
 
+class _DiagnosticCard extends StatelessWidget {
+  final String title;
+  final List<Widget> body;
+
+  const _DiagnosticCard(this.title, this.body, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: colorWarning,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...body
+            ]),
+      ),
+    );
+  }
+}
+
 class _DiagnosticW extends StatelessWidget {
   final Diagnostic diagnostic;
   const _DiagnosticW(this.diagnostic, {super.key});
@@ -407,52 +436,51 @@ class _DiagnosticW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const itemPadding = EdgeInsets.symmetric(vertical: 2.0);
-    return Card(
-      color: colorWarning,
-      child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // collisions
-            if (diagnostic.collisions.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8.0),
-                child: Text("Créneaux simultanés :"),
-              ),
-            ...diagnostic.collisions.entries
+    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      // collisions
+      if (diagnostic.collisions.isNotEmpty)
+        _DiagnosticCard(
+            "Créneaux simultanés :",
+            diagnostic.collisions.entries
                 .map((item) => Padding(
                       padding: itemPadding,
                       child: Text(
                           "S${item.key.semaine} ${item.key.formatDateHeure()} (${item.value.map((m) => m.format(dense: true)).join(' et ')})"),
                     ))
-                .toList(),
-            // chevauchements
-            if (diagnostic.chevauchements.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text("Créneaux en chevauchements :"),
-              ),
-            ...diagnostic.chevauchements
+                .toList()),
+      // chevauchements
+      if (diagnostic.chevauchements.isNotEmpty)
+        _DiagnosticCard(
+            "Créneaux en chevauchements :",
+            diagnostic.chevauchements
                 .map((ch) => Padding(
                       padding: itemPadding,
                       child: Text(
                           "${ch.debut.date.formatDateHeure()} (${ch.debut.matiere.format(dense: true)}) - ${ch.fin.date.formatDateHeure()} (${ch.fin.matiere.format(dense: true)})"),
                     ))
-                .toList(),
-            // surcharges
-            if (diagnostic.semainesChargees.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text("Semaines en surchages :"),
-              ),
-            ...diagnostic.semainesChargees
+                .toList()),
+      // contraintes non respectées
+      if (diagnostic.contraintes.isNotEmpty)
+        _DiagnosticCard(
+            "Contraintes horaires non respectées :",
+            diagnostic.contraintes
+                .map((item) => Padding(
+                      padding: itemPadding,
+                      child: Text(
+                          "${item.date.formatDateHeure()} (${item.matiere.format(dense: true)})"),
+                    ))
+                .toList()),
+      // surcharges
+      if (diagnostic.semainesChargees.isNotEmpty)
+        _DiagnosticCard(
+            "Semaines en surchages :",
+            diagnostic.semainesChargees
                 .map((item) => Padding(
                       padding: itemPadding,
                       child: Text("Semaine $item"),
                     ))
-                .toList(),
-          ])),
-    );
+                .toList()),
+    ]);
   }
 }
 

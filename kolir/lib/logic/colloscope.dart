@@ -24,9 +24,14 @@ class Diagnostic {
 
   final List<Chevauchement> chevauchements;
 
+  /// les colles ne respectant pas les contraintes de créneau
+  /// du groupe
+  final List<Colle> contraintes;
+
   /// index des semaines en surcharges
   final List<int> semainesChargees;
-  const Diagnostic(this.collisions, this.chevauchements, this.semainesChargees);
+  const Diagnostic(this.collisions, this.chevauchements, this.contraintes,
+      this.semainesChargees);
 }
 
 typedef GroupeID = int;
@@ -182,8 +187,9 @@ class Colloscope {
     return Colloscope.fromJson(jsonDecode(contents));
   }
 
-  Map get _groupeMap => Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
-  Map get _matiereMap =>
+  Map<GroupeID, Groupe> get _groupeMap =>
+      Map.fromEntries(groupes.map((e) => MapEntry(e.id, e)));
+  Map<MatiereID, Matiere> get _matiereMap =>
       Map.fromEntries(matieresList.values.map((e) => MapEntry(e.index, e)));
 
   /// [parSemaine] trie les colles par semaine et renvoie une liste
@@ -200,8 +206,12 @@ class Colloscope {
         final creneau = item.value[creneauIndex];
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => {});
         final groupesParMatiere = semaine.putIfAbsent(matiere, () => []);
-        groupesParMatiere.add(PopulatedCreneau(creneauIndex, creneau.date,
-            groupeMap[creneau.groupeID], creneau.colleur, matiereMap[matiere]));
+        groupesParMatiere.add(PopulatedCreneau(
+            creneauIndex,
+            creneau.date,
+            groupeMap[creneau.groupeID],
+            creneau.colleur,
+            matiereMap[matiere]!));
       }
     }
     return _semaineMapToList(semaines);
@@ -241,8 +251,12 @@ class Colloscope {
           creneauIndex++) {
         final creneau = creneaux[creneauIndex];
         final semaine = semaines.putIfAbsent(creneau.date.semaine, () => []);
-        semaine.add(PopulatedCreneau(creneauIndex, creneau.date,
-            groupeMap[creneau.groupeID], creneau.colleur, matiereMap[matiere]));
+        semaine.add(PopulatedCreneau(
+            creneauIndex,
+            creneau.date,
+            groupeMap[creneau.groupeID],
+            creneau.colleur,
+            matiereMap[matiere]!));
       }
       // creneaux is already sorted
       return MapEntry(matiere, _semaineMapToList(semaines));
@@ -253,6 +267,7 @@ class Colloscope {
   /// Un colloscope valide devrait renvoyer une liste vide.
   Map<GroupeID, Diagnostic> diagnostics() {
     final Map<GroupeID, Diagnostic> out = {};
+    final gm = _groupeMap;
     for (var item in parGroupe().entries) {
       final group = item.key;
       final parSemaine = item.value;
@@ -289,6 +304,14 @@ class Colloscope {
         }
       }
 
+      // contraintes de créneaux
+      final contraintesMap =
+          gm[group]!.creneauxInterdits.map((cr) => cr.copyWithWeek(1)).toSet();
+      final contraintes = parSemaine
+          .map((s) => s.item.where(
+              (colle) => contraintesMap.contains(colle.date.copyWithWeek(1))))
+          .fold(<Colle>[], (pr, el) => [...pr, ...el]);
+
       // surchage : on calcule le nombre moyen de colles par semaine
       final nbColles = parSemaine.isEmpty
           ? 0
@@ -305,9 +328,10 @@ class Colloscope {
 
       if (collisions.isNotEmpty ||
           semainesChargees.isNotEmpty ||
-          chevauchements.isNotEmpty) {
+          chevauchements.isNotEmpty ||
+          contraintes.isNotEmpty) {
         out[group] = Diagnostic(Collisions.fromEntries(collisions),
-            chevauchements, semainesChargees);
+            chevauchements, contraintes, semainesChargees);
       }
     }
     return out;
