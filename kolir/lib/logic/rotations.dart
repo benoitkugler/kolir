@@ -25,7 +25,6 @@ class RotationParams {
 
   /// prend en compte les contraintes appliquées à la première semaine
   /// et renvoie toutes les possibilités d'attribution
-  /// [checkConstraints] doit être appelé avant
   List<Permutation>? _buildCandidates() {
     final firstWeek = creneauxParSemaine.first.item;
     final groupeCandidates = _applyConstraints(firstWeek);
@@ -93,17 +92,6 @@ class RotationParams {
     return true;
   }
 
-  int get _periode {
-    final nbWeek =
-        creneauxParSemaine.last.semaine - creneauxParSemaine.first.semaine + 1;
-    final nbCreneaux =
-        creneauxParSemaine.map((s) => s.item.length).reduce((a, b) => a + b);
-    final nbGroupes = groupes.length;
-    final frequence = nbWeek / (nbCreneaux / nbGroupes);
-    final periode = (1 / frequence).ceil();
-    return periode;
-  }
-
   MaybeRotations _buildRotation(Map<GroupeID, Groupe> gm,
       List<Permutation> candidates, bool usePermutation) {
     var lastChosenIndex = 0;
@@ -135,12 +123,10 @@ class RotationParams {
     return MaybeRotations(out, "");
   }
 
-  /// TODO: minimize ecart between two weeks
-  ///
   /// [getRotations] renvoie, pour chaque semaine, les groupes affectés
   /// aux créneaux de la semaine.
   /// Une erreur est retournée pour les cas pathologiques.
-  MaybeRotations getRotations(bool usePermutation) {
+  MaybeRotations getRotations(int periode, bool usePermutation) {
     final gm = groupeMap(groupes);
     final candidates = _buildCandidates();
 
@@ -149,7 +135,6 @@ class RotationParams {
           "Les contraintes hedbomadaires des groupes ne peuvent être résolues.");
     }
 
-    final periode = _periode;
     // try every permutation of the candidate, until one with equal repartition is found
     for (var permutatedCandidates in generatePermutations(candidates)) {
       final res = _buildRotation(gm, permutatedCandidates, usePermutation);
@@ -157,7 +142,6 @@ class RotationParams {
         // by design, an error in one permutation will lead to error in all permutations
         return res;
       }
-
       if (res._hasEquilibrium() &&
           res._respectPeriode(periode, creneauxParSemaine)) {
         return res; // great !
@@ -241,4 +225,15 @@ Iterable<List<T>> generatePermutations<T>(List<T> source) {
   }
 
   return permutate(source, 0);
+}
+
+/// [hintPeriode] renvoie la période déduite des créneaux et groupes
+/// choisis.
+/// Cette estimation dois parfois être corrigée manuellement.
+int hintPeriode(
+    List<SemaineTo<List<PopulatedCreneau>>> creneaux, int nbGroupes) {
+  final nbWeek = creneaux.last.semaine - creneaux.first.semaine + 1;
+  final nbCreneaux = creneaux.map((s) => s.item.length).reduce((a, b) => a + b);
+  final periode = nbWeek / (nbCreneaux / nbGroupes);
+  return periode.ceil();
 }

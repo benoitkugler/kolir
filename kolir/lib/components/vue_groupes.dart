@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
+import 'package:kolir/logic/rotations.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-typedef Creneaux = Map<MatiereID, VueMatiere>;
+typedef CreneauxMatieres = Map<MatiereID, VueMatiere>;
 
 const colorWarning = Colors.orangeAccent;
 
@@ -15,7 +16,7 @@ class VueGroupeW extends StatefulWidget {
   final List<Groupe> groupes;
   final Map<GroupeID, VueGroupe> colles;
   final Map<GroupeID, Diagnostic> diagnostics;
-  final Creneaux creneaux;
+  final CreneauxMatieres creneaux;
 
   final void Function() onAddGroupe;
   final void Function(GroupeID) onRemoveGroupe;
@@ -25,13 +26,8 @@ class VueGroupeW extends StatefulWidget {
 
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
-  final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
-      bool usePermutation) onAttribueCyclique;
-  final String Function(
-    MatiereID mat,
-    List<GroupeID> groupes,
-    List<int> semaines,
-  ) checkAttributeCyclique;
+  final String Function(MatiereID mat, List<GroupeID> groupes,
+      List<int> semaines, int periode, bool usePermutation) onAttribueCyclique;
 
   const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
@@ -41,7 +37,6 @@ class VueGroupeW extends StatefulWidget {
       required this.onUpdateGroupeContraintes,
       required this.onToogleCreneau,
       required this.onAttribueCyclique,
-      required this.checkAttributeCyclique,
       super.key});
 
   @override
@@ -110,7 +105,6 @@ class _VueGroupeWState extends State<VueGroupeW> {
             widget.groupes,
             widget.creneaux,
             widget.onAttribueCyclique,
-            widget.checkAttributeCyclique,
           ),
         ),
       ),
@@ -143,7 +137,7 @@ class _GroupeW extends StatefulWidget {
   final MatiereProvider matieresList;
   final Groupe groupe;
   final VueGroupe semaines;
-  final Creneaux creneaux;
+  final CreneauxMatieres creneaux;
   final Diagnostic? diagnostic;
 
   final void Function() onRemove;
@@ -367,7 +361,7 @@ class _GroupStaticW extends StatelessWidget {
 class _GroupEditW extends StatelessWidget {
   final MatiereProvider matieresList;
   final GroupeID groupe;
-  final Creneaux creneaux;
+  final CreneauxMatieres creneaux;
 
   final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
 
@@ -548,16 +542,11 @@ class _Assistant extends StatelessWidget {
   final List<Groupe> groupes;
   final Map<MatiereID, VueMatiere> creneaux;
 
-  final void Function(MatiereID mat, List<GroupeID> groupes, List<int> semaines,
-      bool usePermutation) onAttribue;
-  final String Function(
-    MatiereID mat,
-    List<GroupeID> groupes,
-    List<int> semaines,
-  ) checkAttribue;
+  final String Function(MatiereID mat, List<GroupeID> groupes,
+      List<int> semaines, int periode, bool usePermutation) onAttribue;
 
-  const _Assistant(this.matieresList, this.groupes, this.creneaux,
-      this.onAttribue, this.checkAttribue,
+  const _Assistant(
+      this.matieresList, this.groupes, this.creneaux, this.onAttribue,
       {super.key});
 
   @override
@@ -568,8 +557,8 @@ class _Assistant extends StatelessWidget {
               matieresList.values[mat],
               groupes,
               creneaux[mat] ?? [],
-              (groupes, semaines, p) => onAttribue(mat, groupes, semaines, p),
-              (groupes, semaines) => checkAttribue(mat, groupes, semaines),
+              (groupes, semaines, periode, p) =>
+                  onAttribue(mat, groupes, semaines, periode, p),
             ));
   }
 }
@@ -579,14 +568,11 @@ class _AssistantMatiere extends StatefulWidget {
   final List<Groupe> groupes;
   final VueMatiere creneaux;
 
-  final void Function(
-          List<GroupeID> groupes, List<int> semaines, bool usePermutation)
-      onAttribue;
-  final String Function(List<GroupeID> groupes, List<int> semaines)
-      checkAttribue;
+  final String Function(List<GroupeID> groupes, List<int> semaines, int periode,
+      bool usePermutation) onAttribue;
 
-  const _AssistantMatiere(this.matiere, this.groupes, this.creneaux,
-      this.onAttribue, this.checkAttribue,
+  const _AssistantMatiere(
+      this.matiere, this.groupes, this.creneaux, this.onAttribue,
       {super.key});
 
   @override
@@ -598,6 +584,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   Set<int> selectedSemaines = {};
 
   bool usePermutation = true;
+  var periodeCt = TextEditingController();
 
   @override
   void didUpdateWidget(covariant _AssistantMatiere oldWidget) {
@@ -605,11 +592,35 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     super.didUpdateWidget(oldWidget);
   }
 
+  void _inferPeriodeHint() {
+    if (selectedCreneaux.isEmpty) {
+      periodeCt.text = "";
+    } else {
+      final periode = hintPeriode(selectedCreneaux, selectedGroupes.length);
+      periodeCt.text = periode.toString();
+    }
+  }
+
+  void onSelectGroupe(GroupeID groupe, bool checked) {
+    setState(() {
+      checked ? selectedGroupes.add(groupe) : selectedGroupes.remove(groupe);
+      _inferPeriodeHint();
+    });
+  }
+
+  void onSelectSemaines(Set<int> selected) {
+    setState(() {
+      selectedSemaines = selected;
+      _inferPeriodeHint();
+    });
+  }
+
   void _onAttribue() {
     final groupes = selectedGroupes.toList();
     groupes.sort();
 
-    final error = widget.checkAttribue(groupes, selectedSemaines.toList());
+    final error = widget.onAttribue(
+        groupes, selectedSemaines.toList(), periode!, usePermutation);
     if (error.isNotEmpty) {
       showDialog(
           context: context,
@@ -621,7 +632,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                         "Les contraintes des groupes ne peuvent pas être résolues."),
                     Text(
                       error,
-                      style: TextStyle(fontStyle: FontStyle.italic),
+                      style: const TextStyle(fontStyle: FontStyle.italic),
                     )
                   ],
                 ),
@@ -629,29 +640,36 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
       return;
     }
 
-    widget.onAttribue(groupes, selectedSemaines.toList(), usePermutation);
     setState(() {
       selectedGroupes.clear();
       selectedSemaines.clear();
     });
   }
 
+  int? get periode => int.tryParse(periodeCt.text);
+
+  Creneaux get selectedCreneaux => selectedSemaines
+      .map((semaineIndex) => SemaineTo(
+          semaineIndex,
+          widget.creneaux
+              .singleWhere((s) => s.semaine == semaineIndex) // week
+              .item))
+      .toList();
+
   bool isSelectionValide() {
     if (selectedGroupes.isEmpty || selectedSemaines.isEmpty) {
       return false;
     }
+    if (periode == null) {
+      return false;
+    }
+
     // pour simplifier on impose l'égalite entre le nombre de
     // créneaux de chaque semaine
-    final nbFirstWeek = widget.creneaux
-        .singleWhere((s) => s.semaine == selectedSemaines.first) // first week
-        .item
-        .length;
-    return selectedSemaines.every((semaineIndex) {
-      final nbWeek = widget.creneaux
-          .singleWhere((s) => s.semaine == semaineIndex) // week
-          .item
-          .length;
-      return nbFirstWeek == nbWeek;
+    final nbFirstWeek = selectedCreneaux.first.item.length;
+    return selectedCreneaux.every((s) {
+      final weekLength = s.item.length;
+      return nbFirstWeek == weekLength;
     });
   }
 
@@ -682,11 +700,8 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                             title: Text(e.name),
                             selected: selectedGroupes.contains(e.id),
                             value: selectedGroupes.contains(e.id),
-                            onChanged: (checked) => setState(() {
-                                  checked!
-                                      ? selectedGroupes.add(e.id)
-                                      : selectedGroupes.remove(e.id);
-                                })))
+                            onChanged: (checked) =>
+                                onSelectGroupe(e.id, checked!)))
                         .toList()),
               ]),
             ),
@@ -696,9 +711,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                 selectedSemaines,
                 widget.matiere,
                 widget.creneaux,
-                (selected) => setState(() {
-                  selectedSemaines = selected;
-                }),
+                onSelectSemaines,
               ),
             ),
           ],
@@ -715,9 +728,17 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                     })),
           ),
           const Spacer(),
+          Flexible(
+            child: TextFormField(
+              controller: periodeCt,
+              decoration: const InputDecoration(
+                  labelText: "Ajuster la période", isDense: true),
+            ),
+          ),
+          const Spacer(),
           Tooltip(
             message:
-                "Placer les groupes sélectionnés sur les semaines sélectionnées.",
+                "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
             child: ElevatedButton(
                 onPressed: isSelectionValide() ? _onAttribue : null,
                 style: ElevatedButton.styleFrom(
@@ -795,7 +816,7 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.50,
+            height: MediaQuery.of(context).size.height * 0.48,
             child: SingleChildScrollView(
               child: SemaineList(
                 semaines.map((semaine) {

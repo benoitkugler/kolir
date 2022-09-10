@@ -161,17 +161,24 @@ class _HomeState extends State<_Home> {
     });
   }
 
-  void attribueCreneaux(MatiereID matiere, List<GroupeID> groupes,
-      List<int> semaines, bool usePermuation) {
-    setState(() {
-      currentColloscope.attribueCyclique(
-          matiere, groupes, semaines, usePermuation);
-    });
+  String attribueCreneaux(MatiereID matiere, List<GroupeID> groupes,
+      List<int> semaines, int periode, bool usePermuation) {
+    final error = currentColloscope.attribueCyclique(
+        matiere, groupes, semaines, periode, usePermuation);
+    if (error.isNotEmpty) return error;
+    setState(() {});
+    return "";
   }
 
   void repeteMotifCourant(MatiereID matiere, int nombre, int? periode) {
     setState(() {
       currentColloscope.repeteMotifCourant(matiere, nombre, periode: periode);
+    });
+  }
+
+  void permuteCreneauxGroupe(CreneauID src, CreneauID dst) {
+    setState(() {
+      currentColloscope.permuteCreneauxGroupe(src, dst);
     });
   }
 
@@ -197,9 +204,11 @@ class _HomeState extends State<_Home> {
     switch (mode) {
       case ModeView.semaines:
         return VueSemaineW(
-            currentColloscope.matieresList,
-            currentColloscope.nbCreneauxVaccants(),
-            currentColloscope.parSemaine());
+          currentColloscope.matieresList,
+          currentColloscope.nbCreneauxVaccants(),
+          currentColloscope.parSemaine(),
+          permuteCreneauxGroupe,
+        );
       case ModeView.groupes:
         return VueGroupeW(
           currentColloscope.creneauxHoraires,
@@ -214,8 +223,6 @@ class _HomeState extends State<_Home> {
           onUpdateGroupeContraintes: updateGroupeContraintes,
           onToogleCreneau: toogleCreneau,
           onAttribueCyclique: attribueCreneaux,
-          checkAttributeCyclique: ((mat, groupes, semaines) =>
-              currentColloscope.checkAttribueCyclique(mat, groupes, semaines)),
         );
       case ModeView.matieres:
         return VueMatiereW(

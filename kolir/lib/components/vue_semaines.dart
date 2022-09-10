@@ -9,7 +9,10 @@ class VueSemaineW extends StatefulWidget {
   final int creneauxVaccants;
   final List<SemaineTo<VueSemaine>> semaines;
 
+  final void Function(CreneauID src, CreneauID dst) onPermuteCreneauxGroupe;
+
   const VueSemaineW(this.matieresList, this.creneauxVaccants, this.semaines,
+      this.onPermuteCreneauxGroupe,
       {super.key});
 
   @override
@@ -37,23 +40,29 @@ class _VueSemaineWState extends State<VueSemaineW> {
             ),
           )
         ],
-        child: NotificationListener<_NotifHover>(
+        child: NotificationListener<_NotifPermute>(
           onNotification: (notification) {
-            setState(() {
-              hoveredGroupe = notification.groupe;
-            });
+            widget.onPermuteCreneauxGroupe(notification.src, notification.dst);
             return true;
           },
-          child: Expanded(
-            child: SingleChildScrollView(
-              child: SemaineList(
-                widget.semaines
-                    .map((e) => SemaineTo(
-                        e.semaine,
-                        _SemaineBody(
-                            widget.matieresList, e.item, hoveredGroupe)))
-                    .toList(),
-                "Aucune colle n'est prévue.",
+          child: NotificationListener<_NotifHover>(
+            onNotification: (notification) {
+              setState(() {
+                hoveredGroupe = notification.groupe;
+              });
+              return true;
+            },
+            child: Expanded(
+              child: SingleChildScrollView(
+                child: SemaineList(
+                  widget.semaines
+                      .map((e) => SemaineTo(
+                          e.semaine,
+                          _SemaineBody(
+                              widget.matieresList, e.item, hoveredGroupe)))
+                      .toList(),
+                  "Aucune colle n'est prévue.",
+                ),
               ),
             ),
           ),
@@ -133,7 +142,7 @@ class _WeekdayW extends StatelessWidget {
           ...creneaux
               .map((creneauxParHeure) => Row(
                   children: creneauxParHeure
-                      .map((creneau) => _Group(
+                      .map((creneau) => _GroupColle(
                           creneau,
                           creneau.groupe != null &&
                               creneau.groupe?.id == currentGroup))
@@ -147,41 +156,58 @@ class _WeekdayW extends StatelessWidget {
 
 class _NotifHover extends Notification {
   final GroupeID? groupe;
-  _NotifHover(this.groupe);
+  const _NotifHover(this.groupe);
 }
 
-class _Group extends StatelessWidget {
+class _NotifPermute extends Notification {
+  final CreneauID src;
+  final CreneauID dst;
+  const _NotifPermute(this.src, this.dst);
+}
+
+class _GroupColle extends StatelessWidget {
   final PopulatedCreneau creneau;
   final bool isHighlighted;
 
-  const _Group(this.creneau, this.isHighlighted, {super.key});
+  const _GroupColle(this.creneau, this.isHighlighted, {super.key});
+
+  Widget _content(bool isHovered) {
+    final group = creneau.groupe?.name ?? "?";
+    final matiere = creneau.matiere;
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+          border: Border.all(color: isHovered ? Colors.black : matiere.color),
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          color: matiere.color.withOpacity(isHighlighted ? 0.6 : 0.5)),
+      child: Text(
+        "${creneau.date.formatHeure()}  $group ",
+        style: TextStyle(fontWeight: isHighlighted ? FontWeight.bold : null),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final group = creneau.groupe?.name ?? "?";
     final matiere = creneau.matiere;
-    return GestureDetector(
-      onTap: creneau.groupe != null
-          ? () => _NotifHover(isHighlighted ? null : creneau.groupe!.id)
-              .dispatch(context)
-          : null,
-      child: Tooltip(
-        message: "${matiere.format()} - ${creneau.colleur}",
-        child: Padding(
-          padding: const EdgeInsets.all(2.0),
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-                border: Border.all(color: matiere.color),
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                color: matiere.color.withOpacity(isHighlighted ? 0.6 : 0.5)),
-            child: Text(
-              "${creneau.date.formatHeure()}  $group ",
-              style:
-                  TextStyle(fontWeight: isHighlighted ? FontWeight.bold : null),
+    return Draggable<CreneauID>(
+      data: creneau.id,
+      feedback: Card(child: _content(false)),
+      child: DragTarget<CreneauID>(
+        builder: (context, candidateData, rejectedData) => GestureDetector(
+          onTap: creneau.groupe != null
+              ? () => _NotifHover(isHighlighted ? null : creneau.groupe!.id)
+                  .dispatch(context)
+              : null,
+          child: Tooltip(
+            message: "${matiere.format()} - ${creneau.colleur}",
+            child: Padding(
+              padding: const EdgeInsets.all(2.0),
+              child: _content(candidateData.isNotEmpty),
             ),
           ),
         ),
+        onAccept: (src) => _NotifPermute(src, creneau.id).dispatch(context),
       ),
     );
   }

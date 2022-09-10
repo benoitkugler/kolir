@@ -459,26 +459,24 @@ class Colloscope {
     return RotationParams(parSemaine, groupes, _parGroupes());
   }
 
-  String checkAttribueCyclique(
-      MatiereID matiere, List<GroupeID> selectedGroupes, List<int> semaines) {
-    final builder = _setupAttribueCyclique(matiere, selectedGroupes, semaines);
-    final out = builder.getRotations(true);
-    return out.error;
-  }
-
   /// [attribueCyclique] attribue les créneaux des semaines donnés aux
   /// groupes donnés.
   /// Pour simplifier, on suppose que le nombre de groupes correspond au nombre
   /// de créneaux disponibles.
   /// Les contraintes des groupes sont prises en compte de façon prioritaire.
-  void attribueCyclique(MatiereID matiere, List<GroupeID> selectedGroupes,
-      List<int> semaines, bool usePermutation) {
+  /// Peut renvoyer une erreur
+  String attribueCyclique(MatiereID matiere, List<GroupeID> selectedGroupes,
+      List<int> semaines, int periode, bool usePermutation) {
     final backupArray = (_matieres[matiere] ?? []);
     final builder = _setupAttribueCyclique(matiere, selectedGroupes, semaines);
 
-    final permutationParSemaine = builder
-        .getRotations(usePermutation)
-        .rotations; // checked by checkAttribueCyclique
+    final res = builder.getRotations(periode, usePermutation);
+
+    if (res.error.isNotEmpty) {
+      return res.error;
+    }
+
+    final permutationParSemaine = res.rotations;
     // apply the selected permutations
     for (var semaineIndex = 0;
         semaineIndex < permutationParSemaine.length;
@@ -490,6 +488,7 @@ class Colloscope {
         backupArray[backupIndex].groupeID = perm[i];
       }
     }
+    return "";
   }
 
   /// [repeteMotifCourant] repete [nombre] fois l'organisation courante,
@@ -508,9 +507,22 @@ class Colloscope {
           (cr) => cr._copyWithWeek(cr.date.semaine + periodOffset * periode!)));
     }
   }
+
+  /// [permuteCreneauxGroupe] échange les assignations des groupes pour les créneaux données
+  void permuteCreneauxGroupe(CreneauID src, CreneauID dst) {
+    final srcC = _matieres[src.matiere]![src.index];
+    final dstC = _matieres[dst.matiere]![dst.index];
+    final tmp = srcC.groupeID;
+    srcC.groupeID = dstC.groupeID;
+    dstC.groupeID = tmp;
+  }
 }
 
-// ---------------------------------------------------------
+class CreneauID {
+  final MatiereID matiere;
+  final int index;
+  const CreneauID(this.matiere, this.index);
+}
 
 class Colle {
   final int creneauxIndex;
@@ -528,7 +540,9 @@ typedef VueSemaine = Map<MatiereID, List<PopulatedCreneau>>;
 /// etre identifiés par index pour gérer les doublons
 typedef _Creneaux = List<_PopulatedCreneau>;
 
-typedef VueMatiere = List<SemaineTo<List<PopulatedCreneau>>>;
+typedef Creneaux = List<SemaineTo<List<PopulatedCreneau>>>;
+
+typedef VueMatiere = Creneaux;
 
 class _PopulatedCreneau {
   final DateHeure date;
@@ -589,6 +603,8 @@ class PopulatedCreneau {
       this.index, this.date, this.groupe, this.colleur, this.matiere);
 
   Colle toColle(Matiere matiere) => Colle(index, date, matiere, colleur);
+
+  CreneauID get id => CreneauID(matiere.index, index);
 }
 
 class SemaineTo<T> {
