@@ -442,8 +442,10 @@ class Colloscope {
     cr.colleur = colleur;
   }
 
-  RotationParams _setupAttribueCyclique(
-      MatiereID matiere, List<GroupeID> selectedGroupes, List<int> semaines) {
+  /// [setupAttribueAuto] prépare l'attribution des créneaux donnés,
+  /// ou renvoit une erreur si les créneaux sont incompatibles avec l'occupation courante.
+  Maybe<RotationSelector> setupAttribueAuto(MatiereID matiere,
+      List<GroupeID> selectedGroupes, List<int> semaines, int periode) {
     final backupArray = (_matieres[matiere] ?? []);
     final creneaux = List<PopulatedCreneau>.generate(
         backupArray.length,
@@ -457,39 +459,24 @@ class Colloscope {
         .toList();
     final groupes = selectedGroupes.map((e) => _groupeMap[e]!).toList();
 
-    return RotationParams(parSemaine, groupes, _parGroupes());
+    return setupRotations(matiere, parSemaine, groupes, _parGroupes(), periode);
   }
 
-  /// [attribueCyclique] attribue les créneaux des semaines donnés aux
-  /// groupes donnés.
-  /// Pour simplifier, on suppose que le nombre de groupes correspond au nombre
-  /// de créneaux disponibles.
-  /// Les contraintes des groupes sont prises en compte de façon prioritaire.
-  /// Peut renvoyer une erreur
-  String attribueCyclique(MatiereID matiere, List<GroupeID> selectedGroupes,
-      List<int> semaines, int periode, bool usePermutation) {
-    final backupArray = (_matieres[matiere] ?? []);
-    final builder = _setupAttribueCyclique(matiere, selectedGroupes, semaines);
+  /// [attribueAuto] effectue la sélection de la meilleur répartition
+  void attribueAuto(SelectedRotation res) {
+    final backupArray = (_matieres[res.matiere] ?? []);
 
-    final res = builder.getRotations(periode, usePermutation);
-
-    if (res.error.isNotEmpty) {
-      return res.error;
-    }
-
-    final permutationParSemaine = res.rotations;
     // apply the selected permutations
     for (var semaineIndex = 0;
-        semaineIndex < permutationParSemaine.length;
+        semaineIndex < res.rotation.length;
         semaineIndex++) {
-      final crs = builder.creneauxParSemaine[semaineIndex].item;
-      final perm = permutationParSemaine[semaineIndex];
+      final crs = res.creneauxParSemaine[semaineIndex].item;
+      final perm = res.rotation[semaineIndex];
       for (var i = 0; i < crs.length; i++) {
         final backupIndex = crs[i].index;
         backupArray[backupIndex].groupeID = perm[i];
       }
     }
-    return "";
   }
 
   /// [repeteMotifCourant] repete [nombre] fois l'organisation courante,

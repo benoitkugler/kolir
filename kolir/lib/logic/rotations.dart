@@ -1,21 +1,42 @@
 import 'package:collection/collection.dart';
 import 'package:kolir/logic/colloscope.dart';
+import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-/// [RotationParams] attribue les groupes donnés dans les créneaux
-/// donnés, en appliquant autant que possible une permutation de semaine en semaine, et
-/// en respectant les contraintes des groupes.
+/// [setupRotations] calcule les répartitions permettant d'attribuer les groupes donnés aux les créneaux
+/// donnés, en respectant les contraintes des groupes.
+/// Les contraintes prises en comptes sont les contraintes hebdomadaires et [alreadyAttributed].
 /// De plus, pour chaque semaine, un groupe apparait au plus une fois.
 /// Pour simplifier, toutes les semaines doivent avoir le même nombre de créneaux.
 /// De plus uniquement les contraintes de la première semaine sont prises en compte.
-class RotationParams {
+/// Une erreur est renvoyé si aucune rotation ne satisfait les contraintes.
+Maybe<RotationSelector> setupRotations(
+    MatiereID matiere,
+    List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine,
+    List<Groupe> groupes,
+    Map<GroupeID, List<DateHeure>> alreadyAttributed,
+    int periode) {
+  final builder =
+      _RotationBuilder(creneauxParSemaine, groupes, alreadyAttributed);
+  final res = builder._build(periode);
+  if (res.error.isNotEmpty) {
+    return Maybe(RotationSelector(0, [], [], [], 0), res.error);
+  }
+
+  return Maybe(
+      RotationSelector(
+          matiere, creneauxParSemaine, res.value, groupes, periode),
+      "");
+}
+
+class _RotationBuilder {
   final List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine;
   final List<Groupe> groupes;
 
   /// [alreadyAttributed] is added to the groupe constraints
   final Map<GroupeID, List<DateHeure>> alreadyAttributed;
 
-  RotationParams(
+  _RotationBuilder(
       this.creneauxParSemaine, this.groupes, this.alreadyAttributed) {
     assert(creneauxParSemaine.isNotEmpty);
     assert(creneauxParSemaine.map((e) => e.item.length).toSet().length == 1);
@@ -25,7 +46,7 @@ class RotationParams {
 
   /// prend en compte les contraintes appliquées à la première semaine
   /// et renvoie toutes les possibilités d'attribution, pour une semaine
-  List<Permutation>? _buildCandidates() {
+  List<Permutation>? _buildPermutationCandidates() {
     final firstWeek = creneauxParSemaine.first.item;
     final groupeCandidates = _applyConstraints(firstWeek);
 
@@ -73,17 +94,10 @@ class RotationParams {
         .toList();
   }
 
-  Iterable<Permutation> _iterFrom(int index, List<Permutation> candidates) {
-    index = index % candidates.length;
-    return candidates
-        .getRange(index, candidates.length)
-        .followedBy(candidates.getRange(0, index));
-  }
-
-  bool _canApplyCandidate(List<PopulatedCreneau> week, Permutation candidate) {
-    assert(week.length == candidate.length);
-    for (var i = 0; i < week.length; i++) {
-      final date = week[i].date;
+  bool _passConstraintOccupied(
+      SemaineTo<List<PopulatedCreneau>> week, Permutation candidate) {
+    for (var i = 0; i < week.item.length; i++) {
+      final date = week.item[i].date;
       final groupeID = candidate[i];
       if ((alreadyAttributed[groupeID] ?? []).contains(date)) {
         return false;
@@ -92,128 +106,53 @@ class RotationParams {
     return true;
   }
 
-  // TODO: la méthode oublie plusieurs possiblités : essayer de faire mieux !
-  MaybeRotations _buildRotation(Map<GroupeID, Groupe> gm,
-      List<Permutation> candidates, bool usePermutation) {
-    var lastChosenIndex = 0;
-    final out = <Permutation>[];
+  // parmi les candidats possibles, filtre en appliquant les contraintes
+  // de chaque semaine
+  Maybe<_CandidatesPerWeek> _buildCandidatesPerWeek(
+      List<Permutation> candidates) {
+    final _CandidatesPerWeek out = [];
     // try to apply the candidate perms to every week
     for (var semaine in creneauxParSemaine) {
-      bool hasFoundCandidate = false;
-      // start at the last index, and try every candidate
-      for (var candidate in _iterFrom(lastChosenIndex, candidates)) {
-        if (_canApplyCandidate(semaine.item, candidate)) {
-          // Great !
-          out.add(candidate);
-          hasFoundCandidate = true;
-
-          // apply the permutation if needed
-          if (usePermutation) {
-            lastChosenIndex++;
-          }
-
-          break;
-        }
+      final l = candidates
+          .where((cd) => _passConstraintOccupied(semaine, cd))
+          .toList();
+      if (l.isEmpty) {
+        return Maybe<_CandidatesPerWeek>([],
+            "Aucune répartition ne convient pour la semaine ${semaine.semaine}.");
       }
-      if (!hasFoundCandidate) {
-        // no candidate match, return an error value
-        return MaybeRotations([],
-            "Aucune répartition pour la semaine ${semaine.semaine}, parmi les permutations : \n${candidates.map((l) => l.map((id) => gm[id]!.name).join(', ')).join('\n')}");
-      }
+      out.add(l);
     }
-    return MaybeRotations(out, "");
+    return Maybe(out, "");
   }
 
-  /// [getRotations] renvoie, pour chaque semaine, les groupes affectés
+  /// [_build] renvoie, pour chaque semaine, les groupes affectés
   /// aux créneaux de la semaine.
   /// Une erreur est retournée pour les cas pathologiques.
-  MaybeRotations getRotations(int periode, bool usePermutation) {
-    final gm = groupeMap(groupes);
-    final candidates = _buildCandidates();
+  Maybe<_CandidatesPerWeek> _build(int periode) {
+    final candidates = _buildPermutationCandidates();
 
     if (candidates == null) {
-      return const MaybeRotations([],
+      return const Maybe([],
           "Les contraintes hebdomadaires des groupes ne peuvent être résolues.");
     }
 
-    // try every permutation of the candidate and select the best
-    // in case nothing works, we give priority to equilibrium over periode
-    MaybeRotations? withEquilibrium;
-    for (var permutatedCandidates in generatePermutations(candidates)) {
-      final res = _buildRotation(gm, permutatedCandidates, usePermutation);
-      if (res.error.isNotEmpty) {
-        // by design, an error in one permutation will lead to error in all permutations
-        return res;
-      }
-      if (res._hasEquilibrium()) {
-        withEquilibrium ??= res;
-        if (res._respectPeriode(periode, creneauxParSemaine)) {
-          return res; // great !
-        }
-      }
-    }
+    final candidatesPerWeek = _buildCandidatesPerWeek(candidates);
 
-    // hope for equilbirum
-    if (withEquilibrium != null) {
-      print("equili");
-      return withEquilibrium;
-    }
-    // arg, select the first one
-    return _buildRotation(gm, candidates, usePermutation);
+    return candidatesPerWeek;
   }
 }
+
+// pour chaque semaine, donne les permutations possibles
+// après sélection des contraintes
+typedef _CandidatesPerWeek = List<List<Permutation>>;
 
 // représente l'attribution des créneaux de la semaine
 typedef Permutation = List<GroupeID>;
 
-class MaybeRotations {
-  final List<Permutation> rotations;
+class Maybe<T> {
+  final T value;
   final String error;
-  const MaybeRotations(this.rotations, this.error);
-
-  bool _hasEquilibrium() {
-    final byGroupes = <GroupeID, int>{};
-    for (var perm in rotations) {
-      for (var groupeID in perm) {
-        byGroupes[groupeID] = (byGroupes[groupeID] ?? 0) + 1;
-      }
-    }
-    return byGroupes.values.toSet().length == 1;
-  }
-
-  // verifie si, pour chaque groupes, les colles sont séparés
-  // d'au plus periode - 1 semaine
-  bool _respectPeriode<T>(int periode, List<SemaineTo<T>> creneauxParSemaine) {
-    assert(rotations.length == creneauxParSemaine.length);
-
-    final weeksByGroup = <GroupeID, List<int>>{};
-    for (var i = 0; i < rotations.length; i++) {
-      final perm = rotations[i];
-      final semaine = creneauxParSemaine[i].semaine;
-      for (var groupeID in perm) {
-        final l = weeksByGroup.putIfAbsent(groupeID, () => []);
-        l.add(semaine);
-      }
-    }
-    // semaines are sorted
-    final firstWeek = creneauxParSemaine.first.semaine;
-    final lastWeek = creneauxParSemaine.last.semaine;
-    return weeksByGroup.values.every((semaines) {
-      semaines.add(lastWeek);
-      for (var i = 0; i < semaines.length; i++) {
-        final int distance;
-        if (i == 0) {
-          distance = semaines[0] - firstWeek;
-        } else {
-          distance = semaines[i] - semaines[i - 1];
-        }
-        if (distance > periode) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }
+  const Maybe(this.value, this.error);
 }
 
 /// [generatePermutations] lazily returns the permutation of [source]
@@ -237,6 +176,35 @@ Iterable<List<T>> generatePermutations<T>(List<T> source) {
   return permutate(source, 0);
 }
 
+int numberOfCombinaisons<T>(List<List<T>> sources) {
+  return sources
+      .map((l) => l.length)
+      .reduce((value, element) => value * element);
+}
+
+Iterable<List<T>> generateCombinaisons<T>(List<List<T>> sources) sync* {
+  if (sources.isEmpty || sources.any((l) => l.isEmpty)) {
+    yield [];
+    return;
+  }
+  var indices = List<int>.filled(sources.length, 0);
+  var next = 0;
+  while (true) {
+    yield [for (var i = 0; i < indices.length; i++) sources[i][indices[i]]];
+    while (true) {
+      var nextIndex = indices[next] + 1;
+      if (nextIndex < sources[next].length) {
+        indices[next] = nextIndex;
+        break;
+      }
+      next += 1;
+      if (next == sources.length) return;
+    }
+    indices.fillRange(0, next, 0);
+    next = 0;
+  }
+}
+
 /// [hintPeriode] renvoie la période déduite des créneaux et groupes
 /// choisis.
 /// Cette estimation dois parfois être corrigée manuellement.
@@ -247,4 +215,118 @@ int hintPeriode(
   final nbCreneaux = creneaux.map((s) => s.item.length).reduce((a, b) => a + b);
   final periode = nbWeek / (nbCreneaux / nbGroupes);
   return periode.ceil();
+}
+
+class RotationSelector {
+  final MatiereID _matiere;
+  final List<SemaineTo<List<PopulatedCreneau>>> _creneauxParSemaine;
+  final _CandidatesPerWeek _candidates;
+  final int _periode;
+
+  final Map<GroupeID, int> bufferEquilibrium;
+  final Map<GroupeID, List<int>> bufferPeriodeByGroupe = {};
+
+  int get essais => numberOfCombinaisons(_candidates);
+
+  RotationSelector(this._matiere, this._creneauxParSemaine, this._candidates,
+      List<Groupe> groupes, this._periode)
+      : bufferEquilibrium =
+            Map.fromEntries(groupes.map((e) => MapEntry(e.id, 0)));
+
+  bool _hasEquilibrium(List<Permutation> value) {
+    bufferEquilibrium.updateAll((key, value) => 0);
+    for (var perm in value) {
+      for (var groupeID in perm) {
+        bufferEquilibrium[groupeID] = (bufferEquilibrium[groupeID] ?? 0) + 1;
+      }
+    }
+    final first = bufferEquilibrium.values.first;
+    return bufferEquilibrium.values.every((size) => size == first);
+  }
+
+  // verifie si, pour chaque groupes, les colles sont séparés
+  // d'au plus periode - 1 semaine
+  // renvoie [null] si la période est respecté, un score sinon
+  int? _respectPeriode<T>(List<Permutation> value) {
+    bufferPeriodeByGroupe.updateAll((key, value) => []);
+    for (var i = 0; i < value.length; i++) {
+      final perm = value[i];
+      final semaine = _creneauxParSemaine[i].semaine;
+      for (var groupeID in perm) {
+        final l = bufferPeriodeByGroupe.putIfAbsent(groupeID, () => []);
+        l.add(semaine);
+      }
+    }
+    // semaines are sorted
+    final firstWeek = _creneauxParSemaine.first.semaine - 1;
+    final lastWeek = _creneauxParSemaine.last.semaine;
+    int closestDistanceForAll = lastWeek - firstWeek;
+    bool respectPeriode = true;
+    for (var groupeSemaines in bufferPeriodeByGroupe.values) {
+      int closestDistance = lastWeek - firstWeek;
+      groupeSemaines.add(lastWeek);
+      for (var i = 0; i < groupeSemaines.length; i++) {
+        final int distance;
+        if (i == 0) {
+          distance = groupeSemaines[0] - firstWeek;
+        } else {
+          distance = groupeSemaines[i] - groupeSemaines[i - 1];
+        }
+        // exclude distance with begining and end
+        if (i != 0 &&
+            i != groupeSemaines.length - 1 &&
+            distance < closestDistance) {
+          closestDistance = distance;
+        }
+        if (distance > _periode) {
+          respectPeriode = false;
+        }
+      }
+      if (closestDistance < closestDistanceForAll) {
+        closestDistanceForAll = closestDistance;
+      }
+    }
+
+    return respectPeriode ? null : closestDistanceForAll;
+  }
+
+  /// [select] renvoie, pour chaque semaine demandée, les groupes affectés
+  /// aux créneaux de la semaine.
+  /// Dans le pire des cas, le temps de calcul est proportionnel à [essais].
+  /// Cette fonction devrait être appelée dans un thread s
+  SelectedRotation select() {
+    final iter = generateCombinaisons(_candidates);
+    // try every permutation of the candidate and select the best
+    // in case nothing works, we give priority to equilibrium over periode
+    List<Permutation>? best;
+    int bestPeriodeScore = 0; // higher is better
+    for (var res in iter) {
+      if (_hasEquilibrium(res)) {
+        final periodeScore = _respectPeriode(res);
+        if (periodeScore == null) {
+          return SelectedRotation(
+              _matiere, _creneauxParSemaine, res); // great !
+        } else if (periodeScore > bestPeriodeScore || best == null) {
+          // garde le meilleur score
+          best = res;
+          bestPeriodeScore = periodeScore;
+        }
+      }
+    }
+
+    // hope for equilbirum
+    if (best != null) {
+      return SelectedRotation(_matiere, _creneauxParSemaine, best);
+    }
+    // arg, select the first one
+    return SelectedRotation(_matiere, _creneauxParSemaine,
+        iter.first); // note that generateCombinaisons is lazy
+  }
+}
+
+class SelectedRotation {
+  final MatiereID matiere;
+  final List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine;
+  final List<Permutation> rotation;
+  const SelectedRotation(this.matiere, this.creneauxParSemaine, this.rotation);
 }

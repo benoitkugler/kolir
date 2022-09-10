@@ -1,3 +1,5 @@
+import 'package:async/async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/week_calendar.dart';
@@ -28,8 +30,9 @@ class VueGroupeW extends StatefulWidget {
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
   final void Function(MatiereID mat) onClearMatiere;
-  final String Function(MatiereID mat, List<GroupeID> groupes,
-      List<int> semaines, int periode, bool usePermutation) onAttribueCyclique;
+  final Maybe<RotationSelector> Function(MatiereID mat, List<GroupeID> groupes,
+      List<int> semaines, int periode) onSetupAttribueAuto;
+  final void Function(SelectedRotation) onAttributeAuto;
 
   const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
@@ -39,7 +42,8 @@ class VueGroupeW extends StatefulWidget {
       required this.onUpdateGroupeContraintes,
       required this.onToogleCreneau,
       required this.onClearMatiere,
-      required this.onAttribueCyclique,
+      required this.onSetupAttribueAuto,
+      required this.onAttributeAuto,
       super.key});
 
   @override
@@ -78,8 +82,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                 }),
             style: ElevatedButton.styleFrom(
                 backgroundColor: isInEdit ? Colors.orange : null),
-            child:
-                Text(isInEdit ? "Terminer" : "Ajouter plusieurs créneaux...")),
+            child: Text(isInEdit ? "Retour" : "Attribuer automatiquement...")),
       )
     ];
     return VueSkeleton(
@@ -117,7 +120,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
             widget.matieresList,
             widget.groupes,
             widget.creneaux,
-            widget.onAttribueCyclique,
+            widget.onSetupAttribueAuto,
+            widget.onAttributeAuto,
           ),
         ),
       ),
@@ -591,11 +595,12 @@ class _Assistant extends StatelessWidget {
   final List<Groupe> groupes;
   final Map<MatiereID, VueMatiere> creneaux;
 
-  final String Function(MatiereID mat, List<GroupeID> groupes,
-      List<int> semaines, int periode, bool usePermutation) onAttribue;
+  final Maybe<RotationSelector> Function(MatiereID mat, List<GroupeID> groupes,
+      List<int> semaines, int periode) onSetupAttribueAuto;
+  final void Function(SelectedRotation) onAttributeAuto;
 
-  const _Assistant(
-      this.matieresList, this.groupes, this.creneaux, this.onAttribue,
+  const _Assistant(this.matieresList, this.groupes, this.creneaux,
+      this.onSetupAttribueAuto, this.onAttributeAuto,
       {super.key});
 
   @override
@@ -606,8 +611,9 @@ class _Assistant extends StatelessWidget {
               matieresList.values[mat],
               groupes,
               creneaux[mat] ?? [],
-              (groupes, semaines, periode, p) =>
-                  onAttribue(mat, groupes, semaines, periode, p),
+              (groupes, semaines, periode) =>
+                  onSetupAttribueAuto(mat, groupes, semaines, periode),
+              onAttributeAuto,
             ));
   }
 }
@@ -617,11 +623,13 @@ class _AssistantMatiere extends StatefulWidget {
   final List<Groupe> groupes;
   final VueMatiere creneaux;
 
-  final String Function(List<GroupeID> groupes, List<int> semaines, int periode,
-      bool usePermutation) onAttribue;
+  final Maybe<RotationSelector> Function(
+          List<GroupeID> groupes, List<int> semaines, int periode)
+      onSetupAttribueAuto;
+  final void Function(SelectedRotation) onAttributeAuto;
 
-  const _AssistantMatiere(
-      this.matiere, this.groupes, this.creneaux, this.onAttribue,
+  const _AssistantMatiere(this.matiere, this.groupes, this.creneaux,
+      this.onSetupAttribueAuto, this.onAttributeAuto,
       {super.key});
 
   @override
@@ -632,10 +640,10 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   Set<GroupeID> selectedGroupes = {};
   Set<int> selectedSemaines = {};
 
-  bool usePermutation = true;
   var periodeCt = TextEditingController();
 
-  bool inComputation = false;
+  int? computationNumber; // null means not in computation
+  CancelableOperation? selectionOperation;
 
   @override
   void didUpdateWidget(covariant _AssistantMatiere oldWidget) {
@@ -670,33 +678,45 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     final groupes = selectedGroupes.toList();
     groupes.sort();
 
-    setState(() {
-      inComputation = true;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 10));
-    final error = await Future.sync(() => widget.onAttribue(
-        groupes, selectedSemaines.toList(), periode!, usePermutation));
-
-    setState(() {
-      inComputation = false;
-    });
-    if (error.isNotEmpty) {
+    final res = widget.onSetupAttribueAuto(
+        groupes, selectedSemaines.toList(), periode!);
+    if (res.error.isNotEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
             title: const Text("Contraintes"),
             content: Text(
-              error,
+              res.error,
               style: const TextStyle(fontStyle: FontStyle.italic),
             )),
       );
       return;
     }
 
+    // actually launch the long computation
+
     setState(() {
+      computationNumber = res.value.essais;
+    });
+
+    final op = compute((selector) => selector.select(), res.value);
+    selectionOperation = CancelableOperation.fromFuture(op);
+    final selected = await selectionOperation!.value; // launch the selection
+    widget.onAttributeAuto(selected);
+
+    setState(() {
+      computationNumber = null;
+      selectionOperation = null;
       selectedGroupes.clear();
       selectedSemaines.clear();
+    });
+  }
+
+  void cancelSelection() {
+    selectionOperation!.cancel();
+    setState(() {
+      computationNumber = null;
+      selectionOperation = null;
     });
   }
 
@@ -773,30 +793,28 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
         const SizedBox(height: 10),
         Row(children: [
           Flexible(
-            child: CheckboxListTile(
-                title: const Text(
-                    "Appliquer une permutation d'une semaine à l'autre"),
-                value: usePermutation,
-                onChanged: (value) => setState(() {
-                      usePermutation = value!;
-                    })),
-          ),
-          const Spacer(),
-          Flexible(
-            child: TextFormField(
-              controller: periodeCt,
-              decoration: const InputDecoration(
-                  labelText: "Ajuster la période", isDense: true),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: TextFormField(
+                controller: periodeCt,
+                decoration: const InputDecoration(
+                    labelText: "Ajuster la période",
+                    isDense: true,
+                    helperText:
+                        "Nombre de semaines entre deux colles, à ajuster quand la valeur déduite de la sélection est incorrecte."),
+              ),
             ),
           ),
           const Spacer(),
           Tooltip(
-            message: inComputation
-                ? "En train de choisir la meilleure répartition..."
+            message: computationNumber != null
+                ? "En train de choisir la meilleure répartition parmi $computationNumber..."
                 : "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
-            child: inComputation
+            child: computationNumber != null
                 ? ElevatedButton.icon(
-                    onPressed: null,
+                    onPressed: cancelSelection,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.yellow.shade600),
                     icon: const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: SizedBox(
@@ -804,7 +822,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                           width: 20,
                           child: CircularProgressIndicator()),
                     ),
-                    label: const Text("Calcul en cours..."))
+                    label: const Text("Annuler l'opération..."))
                 : ElevatedButton(
                     onPressed: isSelectionValide() ? _onAttribue : null,
                     style: ElevatedButton.styleFrom(

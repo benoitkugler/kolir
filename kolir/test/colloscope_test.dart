@@ -56,4 +56,14 @@ void main() {
     print(generatePermutations([1, 2, 3, 4]));
     print(generatePermutations([1, 2, 3, 4]).length);
   });
+
+  test("Combinaisons", () {
+    final l = [
+      [1, 2],
+      [3],
+      [4, 5]
+    ];
+    print(generateCombinaisons(l));
+    expect(generateCombinaisons(l).length, equals(numberOfCombinaisons(l)));
+  });
 }

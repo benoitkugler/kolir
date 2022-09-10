@@ -8,6 +8,7 @@ import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/rotations.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
@@ -167,13 +168,9 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
-  String attribueCreneaux(MatiereID matiere, List<GroupeID> groupes,
-      List<int> semaines, int periode, bool usePermuation) {
-    final error = currentColloscope.attribueCyclique(
-        matiere, groupes, semaines, periode, usePermuation);
-    if (error.isNotEmpty) return error;
+  void attribueAuto(SelectedRotation res) {
+    currentColloscope.attribueAuto(res);
     setState(() {});
-    return "";
   }
 
   void repeteMotifCourant(MatiereID matiere, int nombre, int? periode) {
@@ -229,7 +226,8 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onUpdateGroupeContraintes: updateGroupeContraintes,
           onToogleCreneau: toogleCreneau,
           onClearMatiere: clearMatiere,
-          onAttribueCyclique: attribueCreneaux,
+          onSetupAttribueAuto: currentColloscope.setupAttribueAuto,
+          onAttributeAuto: attribueAuto,
         );
       case ModeView.matieres:
         return VueMatiereW(
