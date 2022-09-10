@@ -32,12 +32,17 @@ class Diagnostic {
   /// index des semaines en surcharges
   final List<int> semainesChargees;
 
-  // /// les matières pour lesquelles le nombre de colle par groupe
-  // /// n'est pas constant
-  // final List<Matiere> matiereNonEquilibrees;
+  /// les matières pour lesquelles le nombre de colle par groupe
+  /// n'est pas constant (ou nul)
+  final List<Matiere> matiereNonEquilibrees;
 
-  const Diagnostic(this.collisions, this.chevauchements, this.contraintes,
-      this.semainesChargees);
+  const Diagnostic(
+    this.collisions,
+    this.chevauchements,
+    this.contraintes,
+    this.semainesChargees,
+    this.matiereNonEquilibrees,
+  );
 }
 
 bool _areMatieresEqual(
@@ -252,6 +257,27 @@ class Colloscope {
   Map<GroupeID, Diagnostic> diagnostics() {
     final Map<GroupeID, Diagnostic> out = {};
     final gm = _groupeMap;
+    final mm = _matiereMap;
+
+    // contrainte d'équilibre
+    final equilibriumFailed = <GroupeID, List<Matiere>>{};
+    for (var item in _matieres.entries) {
+      final matiere = item.key;
+      // calcule le nombre de colle par groupe
+      final parGroupe = <GroupeID, int>{};
+      for (var cr in item.value) {
+        if (cr.groupeID == null) continue;
+        parGroupe[cr.groupeID!] = (parGroupe[cr.groupeID] ?? 0) + 1;
+      }
+      // on accepte soit 0, soit un nombre commun
+      if (parGroupe.values.toSet().length != 1) {
+        for (var groupe in parGroupe.keys) {
+          final l = equilibriumFailed.putIfAbsent(groupe, () => []);
+          l.add(mm[matiere]!);
+        }
+      }
+    }
+
     for (var item in parGroupe().entries) {
       final group = item.key;
       final parSemaine = item.value;
@@ -309,12 +335,14 @@ class Colloscope {
           .map((s) => s.semaine)
           .toList();
 
+      final equilibrium = equilibriumFailed[group] ?? [];
       if (collisions.isNotEmpty ||
           semainesChargees.isNotEmpty ||
           chevauchements.isNotEmpty ||
-          contraintes.isNotEmpty) {
+          contraintes.isNotEmpty ||
+          equilibrium.isNotEmpty) {
         out[group] = Diagnostic(Collisions.fromEntries(collisions),
-            chevauchements, contraintes, semainesChargees);
+            chevauchements, contraintes, semainesChargees, equilibrium);
       }
     }
     return out;

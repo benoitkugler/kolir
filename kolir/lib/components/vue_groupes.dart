@@ -528,6 +528,16 @@ class _DiagnosticW extends StatelessWidget {
                       child: Text("Semaine $item"),
                     ))
                 .toList()),
+      // manque d'équilibre
+      if (diagnostic.matiereNonEquilibrees.isNotEmpty)
+        _DiagnosticCard(
+            "Matières non équilibrées :",
+            diagnostic.matiereNonEquilibrees
+                .map((item) => Padding(
+                      padding: itemPadding,
+                      child: Text(item.format()),
+                    ))
+                .toList()),
     ]);
   }
 }
