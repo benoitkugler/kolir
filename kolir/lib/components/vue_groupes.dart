@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -106,7 +108,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
                   gr,
                   widget.colles[gr.id] ?? [],
                   widget.creneaux,
-                  widget.diagnostics[gr.id],
+                  widget.diagnostics[gr.id] ??
+                      const Diagnostic({}, [], [], [], []),
                   () => widget.onRemoveGroupe(gr.id),
                   () => widget.onClearGroupeCreneaux(gr.id),
                   (mat, creneauIndex) =>
@@ -164,7 +167,7 @@ class _GroupeW extends StatefulWidget {
   final Groupe groupe;
   final VueGroupe semaines;
   final CreneauxMatieres creneaux;
-  final Diagnostic? diagnostic;
+  final Diagnostic diagnostic;
 
   final void Function() onRemove;
   final void Function() onClearCreneaux;
@@ -218,6 +221,9 @@ class _GroupeWState extends State<_GroupeW> {
     }
     return "(${widget.groupe.creneauxInterdits.map((e) => e.formatDateHeure(dense: true)).join(" - ")})";
   }
+
+  int get nbMaxCollesParSemaine =>
+      widget.semaines.map((s) => s.item.length).fold(0, max);
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +300,7 @@ class _GroupeWState extends State<_GroupeW> {
                   ),
                 ),
               ),
-              if (widget.diagnostic != null) _DiagnosticW(widget.diagnostic!)
+              _DiagnosticW(widget.diagnostic, nbMaxCollesParSemaine)
             ],
           ),
         ),
@@ -526,12 +532,28 @@ class _DiagnosticCard extends StatelessWidget {
 
 class _DiagnosticW extends StatelessWidget {
   final Diagnostic diagnostic;
-  const _DiagnosticW(this.diagnostic, {super.key});
+  final int nbMaxColles;
+  const _DiagnosticW(this.diagnostic, this.nbMaxColles, {super.key});
 
   @override
   Widget build(BuildContext context) {
     const itemPadding = EdgeInsets.symmetric(vertical: 2.0);
     return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Card(
+          color: Colors.yellow,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: RichText(
+                text: TextSpan(
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyText1?.color),
+                    children: [
+                  const TextSpan(text: "Nombre max. de colles par semaine : "),
+                  TextSpan(
+                      text: "$nbMaxColles",
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ])),
+          )),
       // collisions
       if (diagnostic.collisions.isNotEmpty)
         _DiagnosticCard(

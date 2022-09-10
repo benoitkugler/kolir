@@ -22,7 +22,7 @@ String groupesToHTML(Colloscope col) {
     });
 
     final page = """
-    <h1>$groupeID</h1>
+    <h1>${col.groupes.singleWhere((gr) => gr.id == groupeID).name}</h1>
 
     <table>
       <tr>
