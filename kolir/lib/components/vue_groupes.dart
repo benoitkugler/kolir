@@ -678,10 +678,8 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                 selectedSemaines,
                 widget.matiere,
                 widget.creneaux,
-                (semaine, selected) => setState(() {
-                  selected
-                      ? selectedSemaines.add(semaine)
-                      : selectedSemaines.remove(semaine);
+                (selected) => setState(() {
+                  selectedSemaines = selected;
                 }),
               ),
             ),
@@ -727,14 +725,33 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
 
-  final void Function(int semaine, bool selected) onSelectSemaine;
+  final void Function(Set<int> newSelection) onSelect;
 
   const _AssistantMatiereCreneaux(
-      this.selectedSemaines, this.matiere, this.semaines, this.onSelectSemaine,
+      this.selectedSemaines, this.matiere, this.semaines, this.onSelect,
       {super.key});
 
   bool isSemaineDisponible(List<PopulatedCreneau> semaine) {
     return semaine.every((cr) => cr.groupe == null);
+  }
+
+  bool? get isAllSelected {
+    if (semaines.length == selectedSemaines.length) return true;
+    if (selectedSemaines.isEmpty) return false;
+    return null;
+  }
+
+  void onSelectAll(bool? v) {
+    final newSelection =
+        v != null && v ? semaines.map((e) => e.semaine).toSet() : <int>{};
+    onSelect(newSelection);
+  }
+
+  void onCheck(int semaine, bool isChecked) {
+    isChecked
+        ? selectedSemaines.add(semaine)
+        : selectedSemaines.remove(semaine);
+    onSelect(selectedSemaines);
   }
 
   @override
@@ -749,6 +766,16 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
             style: TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 10),
+          CheckboxListTile(
+            tristate: true,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            value: isAllSelected,
+            onChanged: onSelectAll,
+            title: Row(
+              children: const [Spacer(), Text("Sélectionner tout")],
+            ),
+          ),
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.50,
             child: SingleChildScrollView(
@@ -764,8 +791,7 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
                         value: selectedSemaines.contains(semaine.semaine),
                         selected: selectedSemaines.contains(semaine.semaine),
                         onChanged: isSemaineDisponible(semaine.item)
-                            ? (value) =>
-                                onSelectSemaine(semaine.semaine, value!)
+                            ? (value) => onCheck(semaine.semaine, value!)
                             : null,
                         title: Row(
                           children: [

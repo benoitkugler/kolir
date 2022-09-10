@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/utils.dart';
 
@@ -18,6 +19,7 @@ class RotationParams {
       this.creneauxParSemaine, this.groupes, this.alreadyAttributed) {
     assert(creneauxParSemaine.isNotEmpty);
     assert(creneauxParSemaine.map((e) => e.item.length).toSet().length == 1);
+    assert(creneauxParSemaine.isSortedBy<num>((s) => s.semaine));
     assert(groupes.isNotEmpty);
   }
 
@@ -91,6 +93,17 @@ class RotationParams {
     return true;
   }
 
+  int get _periode {
+    final nbWeek =
+        creneauxParSemaine.last.semaine - creneauxParSemaine.first.semaine + 1;
+    final nbCreneaux =
+        creneauxParSemaine.map((s) => s.item.length).reduce((a, b) => a + b);
+    final nbGroupes = groupes.length;
+    final frequence = nbWeek / (nbCreneaux / nbGroupes);
+    final periode = (1 / frequence).ceil();
+    return periode;
+  }
+
   MaybeRotations _buildRotation(Map<GroupeID, Groupe> gm,
       List<Permutation> candidates, bool usePermutation) {
     var lastChosenIndex = 0;
@@ -136,6 +149,7 @@ class RotationParams {
           "Les contraintes hedbomadaires des groupes ne peuvent être résolues.");
     }
 
+    final periode = _periode;
     // try every permutation of the candidate, until one with equal repartition is found
     for (var permutatedCandidates in generatePermutations(candidates)) {
       final res = _buildRotation(gm, permutatedCandidates, usePermutation);
@@ -144,7 +158,8 @@ class RotationParams {
         return res;
       }
 
-      if (res._hasEquilibrium()) {
+      if (res._hasEquilibrium() &&
+          res._respectPeriode(periode, creneauxParSemaine)) {
         return res; // great !
       }
     }
@@ -170,6 +185,40 @@ class MaybeRotations {
       }
     }
     return byGroupes.values.toSet().length == 1;
+  }
+
+  // verifie si, pour chaque groupes, les colles sont séparés
+  // d'au plus periode - 1 semaine
+  bool _respectPeriode<T>(int periode, List<SemaineTo<T>> creneauxParSemaine) {
+    assert(rotations.length == creneauxParSemaine.length);
+
+    final weeksByGroup = <GroupeID, List<int>>{};
+    for (var i = 0; i < rotations.length; i++) {
+      final perm = rotations[i];
+      final semaine = creneauxParSemaine[i].semaine;
+      for (var groupeID in perm) {
+        final l = weeksByGroup.putIfAbsent(groupeID, () => []);
+        l.add(semaine);
+      }
+    }
+    // semaines are sorted
+    final firstWeek = creneauxParSemaine.first.semaine;
+    final lastWeek = creneauxParSemaine.last.semaine;
+    return weeksByGroup.values.every((semaines) {
+      semaines.add(lastWeek);
+      for (var i = 0; i < semaines.length; i++) {
+        final int distance;
+        if (i == 0) {
+          distance = semaines[0] - firstWeek;
+        } else {
+          distance = semaines[i] - semaines[i - 1];
+        }
+        if (distance > periode) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
 }
 

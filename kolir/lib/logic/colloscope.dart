@@ -417,6 +417,7 @@ class Colloscope {
         (creneauIndex) =>
             _publy(matiere, creneauIndex, backupArray[creneauIndex]));
 
+    semaines.sort();
     final parSemaine = semaines
         .map((si) => SemaineTo(
             si, creneaux.where((cr) => cr.date.semaine == si).toList()))
