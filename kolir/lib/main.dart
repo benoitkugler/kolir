@@ -38,7 +38,7 @@ class _Home extends StatefulWidget {
   State<_Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<_Home> {
+class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
   Colloscope currentColloscope = Colloscope({}, []);
   Colloscope savedColloscope =
       Colloscope({}, []); // cached version for the lastly saved
@@ -54,7 +54,7 @@ class _HomeState extends State<_Home> {
     super.initState();
   }
 
-  void _loadFromFile() async {
+  Future<void> _loadFromFile() async {
     Colloscope col;
     try {
       col = await Colloscope.load();

@@ -5,6 +5,7 @@ import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/rotations.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 typedef CreneauxMatieres = Map<MatiereID, VueMatiere>;
 
@@ -45,12 +46,20 @@ class VueGroupeW extends StatefulWidget {
 
 class _VueGroupeWState extends State<VueGroupeW> {
   bool isInEdit = false;
+  final itemScrollController = ItemScrollController();
+
+  void scrollToFirstDiagnostic() {
+    final groupeID = widget.diagnostics.keys.first;
+    final index = widget.groupes.indexWhere((gr) => gr.id == groupeID);
+    itemScrollController.scrollTo(
+        index: index, duration: const Duration(milliseconds: 200));
+  }
 
   @override
   Widget build(BuildContext context) {
     final actions = [
       if (widget.diagnostics.isNotEmpty) ...[
-        _DiagnosticAlert(widget.diagnostics),
+        _DiagnosticAlert(widget.diagnostics, scrollToFirstDiagnostic),
         const SizedBox(width: 10),
       ],
       ElevatedButton.icon(
@@ -81,25 +90,28 @@ class _VueGroupeWState extends State<VueGroupeW> {
           duration: const Duration(milliseconds: 300),
           crossFadeState:
               isInEdit ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: ListView(
-            shrinkWrap: true,
-            children: widget.groupes
-                .map((gr) => _GroupeW(
-                      widget.horaires,
-                      widget.matieresList,
-                      gr,
-                      widget.colles[gr.id] ?? [],
-                      widget.creneaux,
-                      widget.diagnostics[gr.id],
-                      () => widget.onRemoveGroupe(gr.id),
-                      () => widget.onClearGroupeCreneaux(gr.id),
-                      (mat, creneauIndex) =>
-                          widget.onToogleCreneau(gr.id, mat, creneauIndex),
-                      (creneauxInterdits) => widget.onUpdateGroupeContraintes(
-                          gr.id, creneauxInterdits),
-                    ))
-                .toList(),
-          ),
+          firstChild: ScrollablePositionedList.builder(
+              key: const PageStorageKey("list_groupes"),
+              itemScrollController: itemScrollController,
+              shrinkWrap: true,
+              itemCount: widget.groupes.length,
+              itemBuilder: (context, index) {
+                final gr = widget.groupes[index];
+                return _GroupeW(
+                  widget.horaires,
+                  widget.matieresList,
+                  gr,
+                  widget.colles[gr.id] ?? [],
+                  widget.creneaux,
+                  widget.diagnostics[gr.id],
+                  () => widget.onRemoveGroupe(gr.id),
+                  () => widget.onClearGroupeCreneaux(gr.id),
+                  (mat, creneauIndex) =>
+                      widget.onToogleCreneau(gr.id, mat, creneauIndex),
+                  (creneauxInterdits) => widget.onUpdateGroupeContraintes(
+                      gr.id, creneauxInterdits),
+                );
+              }),
           secondChild: _Assistant(
             widget.matieresList,
             widget.groupes,
@@ -115,14 +127,17 @@ class _VueGroupeWState extends State<VueGroupeW> {
 class _DiagnosticAlert extends StatelessWidget {
   final Map<GroupeID, Diagnostic> diagnostics;
 
-  const _DiagnosticAlert(this.diagnostics, {super.key});
+  final void Function() onClick;
+
+  const _DiagnosticAlert(this.diagnostics, this.onClick, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      color: colorWarning,
-      child: Padding(
-        padding: EdgeInsets.all(12.0),
+    return ElevatedButton(
+      onPressed: onClick,
+      style: ElevatedButton.styleFrom(backgroundColor: colorWarning),
+      child: const Padding(
+        padding: EdgeInsets.all(6.0),
         child: Text(
           "Certains groupes requierent une attention.",
           style: TextStyle(fontSize: 14),

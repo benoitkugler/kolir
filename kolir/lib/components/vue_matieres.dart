@@ -38,6 +38,7 @@ class VueMatiereW extends StatelessWidget {
       actions: const [],
       child: Expanded(
           child: ListView(
+        key: const PageStorageKey("list_matiere"),
         children: entries
             .map((e) => _MatiereW(
                   horaires,

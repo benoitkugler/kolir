@@ -302,7 +302,7 @@ class _MatieresTabsState extends State<MatieresTabs>
                   onTap: (value) => setState(() {
                     ct.index = value;
                   }),
-                  isScrollable: true,
+                  // isScrollable: true,
                   labelColor: Colors.black,
                   splashBorderRadius:
                       const BorderRadius.all(Radius.circular(4)),

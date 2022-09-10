@@ -351,6 +351,7 @@ class Colloscope {
   /// [nbCreneauxVaccants] renvoie le nombre de créneaux définis mais non
   /// attribués à un groupe
   int nbCreneauxVaccants() {
+    if (_matieres.isEmpty) return 0;
     return (_matieres.values
             .map((l) => l.where((cr) => cr.groupeID == null).length))
         .reduce((value, element) => value + element);

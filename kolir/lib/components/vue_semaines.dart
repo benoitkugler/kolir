@@ -54,6 +54,7 @@ class _VueSemaineWState extends State<VueSemaineW> {
             },
             child: Expanded(
               child: SingleChildScrollView(
+                key: const PageStorageKey("list_semaine"),
                 child: SemaineList(
                   widget.semaines
                       .map((e) => SemaineTo(
