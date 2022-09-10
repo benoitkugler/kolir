@@ -209,11 +209,15 @@ class Colloscope {
     final semaines = <int, List<Colle>>{};
     for (var element in _matieres.entries) {
       final matiere = element.key;
-      final creneauxGroupe =
-          element.value.where((element) => element.groupeID == groupe);
-      for (var cr in creneauxGroupe) {
-        final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
-        semaine.add(Colle(cr.date, matieresList.values[matiere], cr.colleur));
+      for (var creneauIndex = 0;
+          creneauIndex < element.value.length;
+          creneauIndex++) {
+        final cr = element.value[creneauIndex];
+        if (cr.groupeID == groupe) {
+          final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
+          semaine.add(Colle(
+              creneauIndex, cr.date, matieresList.values[matiere], cr.colleur));
+        }
       }
     }
     for (var l in semaines.values) {
@@ -481,10 +485,11 @@ class Colloscope {
 // ---------------------------------------------------------
 
 class Colle {
+  final int creneauxIndex;
   final DateHeure date;
   final Matiere matiere;
   final String colleur;
-  const Colle(this.date, this.matiere, this.colleur);
+  const Colle(this.creneauxIndex, this.date, this.matiere, this.colleur);
 }
 
 typedef VueGroupe = List<SemaineTo<List<Colle>>>; // semaines => colles
@@ -555,7 +560,7 @@ class PopulatedCreneau {
   const PopulatedCreneau(
       this.index, this.date, this.groupe, this.colleur, this.matiere);
 
-  Colle toColle(Matiere matiere) => Colle(date, matiere, colleur);
+  Colle toColle(Matiere matiere) => Colle(index, date, matiere, colleur);
 }
 
 class SemaineTo<T> {

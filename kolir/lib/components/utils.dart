@@ -155,8 +155,7 @@ class ColleW extends StatefulWidget {
   final void Function(String)? onEditColleur;
 
   const ColleW(this.colle,
-      {this.showMatiere = true, this.onDelete, this.onEditColleur, super.key})
-      : assert((onDelete == null) == (onEditColleur == null));
+      {this.showMatiere = true, this.onDelete, this.onEditColleur, super.key});
 
   @override
   State<ColleW> createState() => _ColleWState();
@@ -191,12 +190,52 @@ class _ColleWState extends State<ColleW> {
     }
   }
 
+  bool get showMenuDetails =>
+      widget.onDelete != null && widget.onEditColleur != null;
+
   @override
   Widget build(BuildContext context) {
     final time = widget.colle.date.formatDateHeure();
     final text = widget.showMatiere
         ? "${widget.colle.matiere.format(dense: true)} $time"
         : time;
+
+    final trailing = showMenuDetails
+        ? PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: () => Future.delayed(const Duration(), showEditColleur),
+                child: const ListTile(
+                  title: Text("Modifier le colleur"),
+                  horizontalTitleGap: 10,
+                  minLeadingWidth: 0,
+                ),
+              ),
+              PopupMenuItem(
+                onTap: widget.onDelete,
+                child: const ListTile(
+                  leading: Icon(Icons.clear_rounded, color: Colors.red),
+                  title: Text("Supprimer"),
+                  horizontalTitleGap: 10,
+                  minLeadingWidth: 0,
+                ),
+              )
+            ],
+            icon: const Icon(Icons.more_vert),
+            splashRadius: 14,
+            tooltip: "Editer...",
+          )
+        : (widget.onDelete != null
+            ? IconButton(
+                padding: EdgeInsets.zero,
+                splashRadius: 16,
+                onPressed: widget.onDelete,
+                icon: const Icon(Icons.clear_rounded, color: Colors.red))
+            : const SizedBox(
+                height: 25,
+                width: 10,
+              ));
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
@@ -217,36 +256,7 @@ class _ColleWState extends State<ColleW> {
               child: Text(widget.colle.colleur,
                   style: const TextStyle(fontStyle: FontStyle.italic)),
             ),
-            widget.onDelete == null
-                ? const SizedBox(
-                    height: 25,
-                    width: 10,
-                  )
-                : PopupMenuButton(
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        onTap: () =>
-                            Future.delayed(const Duration(), showEditColleur),
-                        child: const ListTile(
-                          title: Text("Modifier le colleur"),
-                          horizontalTitleGap: 10,
-                          minLeadingWidth: 0,
-                        ),
-                      ),
-                      PopupMenuItem(
-                        onTap: widget.onDelete,
-                        child: const ListTile(
-                          leading: Icon(Icons.clear_rounded, color: Colors.red),
-                          title: Text("Supprimer"),
-                          horizontalTitleGap: 10,
-                          minLeadingWidth: 0,
-                        ),
-                      )
-                    ],
-                    icon: const Icon(Icons.more_vert),
-                    splashRadius: 14,
-                    tooltip: "Editer...",
-                  )
+            trailing,
           ],
         ),
       ),

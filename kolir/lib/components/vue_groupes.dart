@@ -262,7 +262,8 @@ class _GroupeWState extends State<_GroupeW> {
                   crossFadeState: isInEdit
                       ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
-                  firstChild: _GroupStaticW(widget.semaines),
+                  firstChild:
+                      _GroupStaticW(widget.semaines, widget.onToogleCreneau),
                   secondChild: _GroupEditW(
                     widget.matieresList,
                     widget.groupe.id,
@@ -338,8 +339,9 @@ class __EditContraintesState extends State<_EditContraintes> {
 
 class _GroupStaticW extends StatelessWidget {
   final VueGroupe semaines;
+  final void Function(MatiereID matiere, int creneauIndex) onDelete;
 
-  const _GroupStaticW(this.semaines, {super.key});
+  const _GroupStaticW(this.semaines, this.onDelete, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +352,13 @@ class _GroupStaticW extends StatelessWidget {
                 SemaineTo(
                     semaine.semaine,
                     Wrap(
-                        children: semaine.item.map((c) => ColleW(c)).toList())))
+                        children: semaine.item
+                            .map((c) => ColleW(
+                                  c,
+                                  onDelete: () => onDelete(
+                                      c.matiere.index, c.creneauxIndex),
+                                ))
+                            .toList())))
             .toList(),
         "Aucune colle n'est encore prévue.");
   }
