@@ -161,6 +161,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void clearMatiere(MatiereID matiereID) {
+    setState(() {
+      currentColloscope.clearMatiere(matiereID);
+    });
+  }
+
   String attribueCreneaux(MatiereID matiere, List<GroupeID> groupes,
       List<int> semaines, int periode, bool usePermuation) {
     final error = currentColloscope.attribueCyclique(
@@ -222,6 +228,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onClearGroupeCreneaux: clearGroupeCreneaux,
           onUpdateGroupeContraintes: updateGroupeContraintes,
           onToogleCreneau: toogleCreneau,
+          onClearMatiere: clearMatiere,
           onAttribueCyclique: attribueCreneaux,
         );
       case ModeView.matieres:

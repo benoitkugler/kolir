@@ -151,7 +151,7 @@ class ColleW extends StatefulWidget {
   final Colle colle;
   final bool showMatiere;
 
-  final void Function()? onDelete;
+  final void Function(bool allMatiere)? onDelete;
   final void Function(String)? onEditColleur;
 
   const ColleW(this.colle,
@@ -212,7 +212,7 @@ class _ColleWState extends State<ColleW> {
                 ),
               ),
               PopupMenuItem(
-                onTap: widget.onDelete,
+                onTap: () => widget.onDelete!(false),
                 child: const ListTile(
                   leading: Icon(Icons.clear_rounded, color: Colors.red),
                   title: Text("Supprimer"),
@@ -226,11 +226,14 @@ class _ColleWState extends State<ColleW> {
             tooltip: "Editer...",
           )
         : (widget.onDelete != null
-            ? IconButton(
-                padding: EdgeInsets.zero,
-                splashRadius: 16,
-                onPressed: widget.onDelete,
-                icon: const Icon(Icons.clear_rounded, color: Colors.red))
+            ? GestureDetector(
+                onLongPress: () => widget.onDelete!(true),
+                child: IconButton(
+                    padding: EdgeInsets.zero,
+                    splashRadius: 16,
+                    onPressed: () => widget.onDelete!(false),
+                    icon: const Icon(Icons.clear_rounded, color: Colors.red)),
+              )
             : const SizedBox(
                 height: 25,
                 width: 10,
@@ -240,7 +243,7 @@ class _ColleWState extends State<ColleW> {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
-          color: widget.colle.matiere.color.withOpacity(0.1),
+          color: widget.colle.matiere.color.withOpacity(0.3),
           border: Border.all(color: widget.colle.matiere.color),
           borderRadius: const BorderRadius.all(
             Radius.circular(4),

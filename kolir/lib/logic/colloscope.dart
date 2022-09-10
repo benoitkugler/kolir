@@ -517,6 +517,13 @@ class Colloscope {
     srcC.groupeID = dstC.groupeID;
     dstC.groupeID = tmp;
   }
+
+  /// [clearMatiere] désaffecte tous les créneaux de [matiereID]
+  void clearMatiere(MatiereID matiereID) {
+    for (var cr in (_matieres[matiereID] ?? <_PopulatedCreneau>[])) {
+      cr.groupeID = null;
+    }
+  }
 }
 
 class CreneauID {

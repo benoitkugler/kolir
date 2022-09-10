@@ -24,7 +24,7 @@ class RotationParams {
   }
 
   /// prend en compte les contraintes appliquées à la première semaine
-  /// et renvoie toutes les possibilités d'attribution
+  /// et renvoie toutes les possibilités d'attribution, pour une semaine
   List<Permutation>? _buildCandidates() {
     final firstWeek = creneauxParSemaine.first.item;
     final groupeCandidates = _applyConstraints(firstWeek);
@@ -92,6 +92,7 @@ class RotationParams {
     return true;
   }
 
+  // TODO: la méthode oublie plusieurs possiblités : essayer de faire mieux !
   MaybeRotations _buildRotation(Map<GroupeID, Groupe> gm,
       List<Permutation> candidates, bool usePermutation) {
     var lastChosenIndex = 0;
@@ -117,7 +118,7 @@ class RotationParams {
       if (!hasFoundCandidate) {
         // no candidate match, return an error value
         return MaybeRotations([],
-            "Aucune répartition pour la semaine ${semaine.semaine}. Candidats : \n${candidates.map((l) => l.map((id) => gm[id]!.name).join(', ')).join('\n')}");
+            "Aucune répartition pour la semaine ${semaine.semaine}, parmi les permutations : \n${candidates.map((l) => l.map((id) => gm[id]!.name).join(', ')).join('\n')}");
       }
     }
     return MaybeRotations(out, "");
@@ -132,23 +133,32 @@ class RotationParams {
 
     if (candidates == null) {
       return const MaybeRotations([],
-          "Les contraintes hedbomadaires des groupes ne peuvent être résolues.");
+          "Les contraintes hebdomadaires des groupes ne peuvent être résolues.");
     }
 
-    // try every permutation of the candidate, until one with equal repartition is found
+    // try every permutation of the candidate and select the best
+    // in case nothing works, we give priority to equilibrium over periode
+    MaybeRotations? withEquilibrium;
     for (var permutatedCandidates in generatePermutations(candidates)) {
       final res = _buildRotation(gm, permutatedCandidates, usePermutation);
       if (res.error.isNotEmpty) {
         // by design, an error in one permutation will lead to error in all permutations
         return res;
       }
-      if (res._hasEquilibrium() &&
-          res._respectPeriode(periode, creneauxParSemaine)) {
-        return res; // great !
+      if (res._hasEquilibrium()) {
+        withEquilibrium ??= res;
+        if (res._respectPeriode(periode, creneauxParSemaine)) {
+          return res; // great !
+        }
       }
     }
 
-    // default to non equilbirum
+    // hope for equilbirum
+    if (withEquilibrium != null) {
+      print("equili");
+      return withEquilibrium;
+    }
+    // arg, select the first one
     return _buildRotation(gm, candidates, usePermutation);
   }
 }
@@ -232,6 +242,7 @@ Iterable<List<T>> generatePermutations<T>(List<T> source) {
 /// Cette estimation dois parfois être corrigée manuellement.
 int hintPeriode(
     List<SemaineTo<List<PopulatedCreneau>>> creneaux, int nbGroupes) {
+  creneaux.sortBy<num>((s) => s.semaine);
   final nbWeek = creneaux.last.semaine - creneaux.first.semaine + 1;
   final nbCreneaux = creneaux.map((s) => s.item.length).reduce((a, b) => a + b);
   final periode = nbWeek / (nbCreneaux / nbGroupes);

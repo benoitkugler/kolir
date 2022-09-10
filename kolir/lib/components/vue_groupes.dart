@@ -27,6 +27,7 @@ class VueGroupeW extends StatefulWidget {
 
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
+  final void Function(MatiereID mat) onClearMatiere;
   final String Function(MatiereID mat, List<GroupeID> groupes,
       List<int> semaines, int periode, bool usePermutation) onAttribueCyclique;
 
@@ -37,6 +38,7 @@ class VueGroupeW extends StatefulWidget {
       required this.onClearGroupeCreneaux,
       required this.onUpdateGroupeContraintes,
       required this.onToogleCreneau,
+      required this.onClearMatiere,
       required this.onAttribueCyclique,
       super.key});
 
@@ -58,10 +60,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      if (widget.diagnostics.isNotEmpty) ...[
-        _DiagnosticAlert(widget.diagnostics, scrollToFirstDiagnostic),
-        const SizedBox(width: 10),
-      ],
+      _DiagnosticAlert(widget.diagnostics, scrollToFirstDiagnostic),
+      const SizedBox(width: 10),
       ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           onPressed: isInEdit ? null : widget.onAddGroupe,
@@ -108,6 +108,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                   () => widget.onClearGroupeCreneaux(gr.id),
                   (mat, creneauIndex) =>
                       widget.onToogleCreneau(gr.id, mat, creneauIndex),
+                  widget.onClearMatiere,
                   (creneauxInterdits) => widget.onUpdateGroupeContraintes(
                       gr.id, creneauxInterdits),
                 );
@@ -133,14 +134,20 @@ class _DiagnosticAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isValid = diagnostics.isEmpty;
     return ElevatedButton(
-      onPressed: onClick,
-      style: ElevatedButton.styleFrom(backgroundColor: colorWarning),
-      child: const Padding(
-        padding: EdgeInsets.all(6.0),
+      onPressed: isValid ? null : onClick,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isValid ? Colors.greenAccent : colorWarning,
+        disabledBackgroundColor: Colors.greenAccent,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
         child: Text(
-          "Certains groupes requierent une attention.",
-          style: TextStyle(fontSize: 14),
+          isValid
+              ? "Aucun problème détecté."
+              : "Certains groupes requierent une attention.",
+          style: const TextStyle(fontSize: 14),
         ),
       ),
     );
@@ -158,6 +165,7 @@ class _GroupeW extends StatefulWidget {
   final void Function() onRemove;
   final void Function() onClearCreneaux;
   final void Function(MatiereID mat, int creneauIndex) onToogleCreneau;
+  final void Function(MatiereID mat) onClearMatiere;
   final void Function(List<DateHeure> creneauxInterdits)
       onUpdateGroupeContraintes;
 
@@ -171,6 +179,7 @@ class _GroupeW extends StatefulWidget {
       this.onRemove,
       this.onClearCreneaux,
       this.onToogleCreneau,
+      this.onClearMatiere,
       this.onUpdateGroupeContraintes,
       {super.key});
 
@@ -271,8 +280,8 @@ class _GroupeWState extends State<_GroupeW> {
                   crossFadeState: isInEdit
                       ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
-                  firstChild:
-                      _GroupStaticW(widget.semaines, widget.onToogleCreneau),
+                  firstChild: _GroupStaticW(widget.semaines,
+                      widget.onToogleCreneau, widget.onClearMatiere),
                   secondChild: _GroupEditW(
                     widget.matieresList,
                     widget.groupe.id,
@@ -349,8 +358,31 @@ class __EditContraintesState extends State<_EditContraintes> {
 class _GroupStaticW extends StatelessWidget {
   final VueGroupe semaines;
   final void Function(MatiereID matiere, int creneauIndex) onDelete;
+  final void Function(MatiereID matiere) onClearMatiere;
 
-  const _GroupStaticW(this.semaines, this.onDelete, {super.key});
+  const _GroupStaticW(this.semaines, this.onDelete, this.onClearMatiere,
+      {super.key});
+
+  void confirmeClearMatiere(Matiere matiere, BuildContext context) async {
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text("Confirmer"),
+              content: Text(
+                  "Confirmez-vous l'effacement des groupes pour la matière ${matiere.format()} ?"),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                  child: const Text("Effacer"),
+                )
+              ],
+            ));
+    if (ok != null) {
+      onClearMatiere(matiere.index);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -364,8 +396,10 @@ class _GroupStaticW extends StatelessWidget {
                         children: semaine.item
                             .map((c) => ColleW(
                                   c,
-                                  onDelete: () => onDelete(
-                                      c.matiere.index, c.creneauxIndex),
+                                  onDelete: (all) => all
+                                      ? confirmeClearMatiere(c.matiere, context)
+                                      : onDelete(
+                                          c.matiere.index, c.creneauxIndex),
                                 ))
                             .toList())))
             .toList(),
@@ -601,6 +635,8 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   bool usePermutation = true;
   var periodeCt = TextEditingController();
 
+  bool inComputation = false;
+
   @override
   void didUpdateWidget(covariant _AssistantMatiere oldWidget) {
     selectedSemaines.clear();
@@ -630,28 +666,31 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     });
   }
 
-  void _onAttribue() {
+  void _onAttribue() async {
     final groupes = selectedGroupes.toList();
     groupes.sort();
 
-    final error = widget.onAttribue(
-        groupes, selectedSemaines.toList(), periode!, usePermutation);
+    setState(() {
+      inComputation = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 10));
+    final error = await Future.sync(() => widget.onAttribue(
+        groupes, selectedSemaines.toList(), periode!, usePermutation));
+
+    setState(() {
+      inComputation = false;
+    });
     if (error.isNotEmpty) {
       showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                        "Les contraintes des groupes ne peuvent pas être résolues."),
-                    Text(
-                      error,
-                      style: const TextStyle(fontStyle: FontStyle.italic),
-                    )
-                  ],
-                ),
-              ));
+        context: context,
+        builder: (context) => AlertDialog(
+            title: const Text("Contraintes"),
+            content: Text(
+              error,
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            )),
+      );
       return;
     }
 
@@ -752,20 +791,32 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
           ),
           const Spacer(),
           Tooltip(
-            message:
-                "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
-            child: ElevatedButton(
-                onPressed: isSelectionValide() ? _onAttribue : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Atttribuer les créneaux",
-                    textAlign: TextAlign.center,
-                  ),
-                )),
+            message: inComputation
+                ? "En train de choisir la meilleure répartition..."
+                : "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
+            child: inComputation
+                ? ElevatedButton.icon(
+                    onPressed: null,
+                    icon: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator()),
+                    ),
+                    label: const Text("Calcul en cours..."))
+                : ElevatedButton(
+                    onPressed: isSelectionValide() ? _onAttribue : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        "Atttribuer les créneaux",
+                        textAlign: TextAlign.center,
+                      ),
+                    )),
           ),
         ])
       ],
@@ -831,7 +882,7 @@ class _AssistantMatiereCreneaux extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.48,
+            height: MediaQuery.of(context).size.height * 0.40,
             child: SingleChildScrollView(
               child: SemaineList(
                 semaines.map((semaine) {

@@ -201,7 +201,7 @@ class _MatiereW extends StatelessWidget {
                                       .map((e) => ColleW(
                                             e.toColle(matiere),
                                             showMatiere: false,
-                                            onDelete: () => onDelete(e.index),
+                                            onDelete: (_) => onDelete(e.index),
                                             onEditColleur: (colleur) =>
                                                 onEditColleur(e.index, colleur),
                                           ))
