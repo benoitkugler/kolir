@@ -1,0 +1,30 @@
+---
+layout: post
+title:  "Notice d'utilisation"
+date:   2022-09-11 20:00:00 +0200
+categories: kolir notice tutoriel
+---
+
+*Kolir* est organisée en trois vues, chacune exposant le même colloscope d'une manière particulière.
+
+Chacune des vues est accessible à tout moment, mais l'ordre naturel est de commencer par la vue **Matières**, puis d'attribuer les créneaux dans la vue **Groupes**, et finalement d'effectuer les dernières permutations dans la vue d'**Ensemble**.
+
+### Vue par matières 
+
+Cette vue permet de définir les créneaux de colles pour chaque matière, via le bouton "Ajouter des créneaux". Le bouton "Répéter..." est un raccourci permettant de répéter les semaines existantes.
+
+### Vue par groupes 
+
+Une fois les créneaux définis, la vue **Groupes** permet de créer les groupes ("Ajouter un groupe").
+Avant d'attribuer des créneaux, il est recommandé de modifier les *contraintes horaires*, par exemple provenant des LV2, pour chaque groupe.
+Le bouton "Attribuer automatiquement..." permet de distribuer les groupes sur les créneaux définis, matière par matière. *Kolir* essaie de proposer une répartition optimale, respectant les contraintes horaires et favorisant l'étalement des colles pour chaque groupe.
+La répartition automatique peut toujours être ajustée pour un groupe donné via le bouton d'édition.
+
+### Vue d'ensemble
+
+Cette vue permet de visualiser globalement l'ensemble du colloscope et surtout d'effectuer facilement des permutations entre deux créneaux, par cliquer-glisser.
+
+## Sauvegarde et export
+
+Les modifications apportées au colloscope sont éphémères et doivent être enregistrées (bouton "Enregistrer"). Les modifications courantes peuvent être annulées (bouton "Annuler") pour revenir à la dernière sauvegarde.
+Quand le colloscope est prêt, vous pouvez l'exporter (bouton "Exporter") au format HTML. Obtenir un PDF se fait facilement en ouvrant les fichiers générés avec le navigateur de votre choix et en imprimant dans un fichier.

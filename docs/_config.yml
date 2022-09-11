@@ -20,9 +20,9 @@ description: >- # this means to ignore newlines until "baseurl:"
   pour faciliter la création de programme de colles en CPGE (colloscope).
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: ""
 github_username: benoitkugler
 lang: fr
+# twitter_username: ""
 
 # Build settings
 markdown: kramdown
