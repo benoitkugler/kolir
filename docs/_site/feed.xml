@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="fr"><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="http://localhost:4000/kolir/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/kolir/" rel="alternate" type="text/html" hreflang="fr" /><updated>2022-09-11T20:42:10+02:00</updated><id>http://localhost:4000/kolir/feed.xml</id><title type="html">Kolir</title><subtitle>Page de présentation de l&apos;application Kolir, une appli. de bureau  pour faciliter la création de programme de colles en CPGE (colloscope).</subtitle><entry><title type="html">Notice d’utilisation</title><link href="http://localhost:4000/kolir/kolir/notice/tutoriel/2022/09/11/notice.html" rel="alternate" type="text/html" title="Notice d’utilisation" /><published>2022-09-11T20:00:00+02:00</published><updated>2022-09-11T20:00:00+02:00</updated><id>http://localhost:4000/kolir/kolir/notice/tutoriel/2022/09/11/notice</id><content type="html" xml:base="http://localhost:4000/kolir/kolir/notice/tutoriel/2022/09/11/notice.html">&lt;p&gt;&lt;em&gt;Kolir&lt;/em&gt; est organisée en trois vues, chacune exposant le même colloscope d’une manière particulière.&lt;/p&gt;
+
+&lt;p&gt;Chacune des vues est accessible à tout moment, mais l’ordre naturel est de commencer par la vue &lt;strong&gt;Matières&lt;/strong&gt;, puis d’attribuer les créneaux dans la vue &lt;strong&gt;Groupes&lt;/strong&gt;, et finalement d’effectuer les dernières permutations dans la vue d’&lt;strong&gt;Ensemble&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;vue-par-matières&quot;&gt;Vue par matières&lt;/h3&gt;
+
+&lt;p&gt;Cette vue permet de définir les créneaux de colles pour chaque matière, via le bouton “Ajouter des créneaux”. Le bouton “Répéter…” est un raccourci permettant de répéter les semaines existantes.&lt;/p&gt;
+
+&lt;h3 id=&quot;vue-par-groupes&quot;&gt;Vue par groupes&lt;/h3&gt;
+
+&lt;p&gt;Une fois les créneaux définis, la vue &lt;strong&gt;Groupes&lt;/strong&gt; permet de créer les groupes (“Ajouter un groupe”).
+Avant d’attribuer des créneaux, il est recommandé de modifier les &lt;em&gt;contraintes horaires&lt;/em&gt;, par exemple provenant des LV2, pour chaque groupe.
+Le bouton “Attribuer automatiquement…” permet de distribuer les groupes sur les créneaux définis, matière par matière. &lt;em&gt;Kolir&lt;/em&gt; essaie de proposer une répartition optimale, respectant les contraintes horaires et favorisant l’étalement des colles pour chaque groupe.
+La répartition automatique peut toujours être ajustée pour un groupe donné via le bouton d’édition.&lt;/p&gt;
+
+&lt;h3 id=&quot;vue-densemble&quot;&gt;Vue d’ensemble&lt;/h3&gt;
+
+&lt;p&gt;Cette vue permet de visualiser globalement l’ensemble du colloscope et surtout d’effectuer facilement des permutations entre deux créneaux, par cliquer-glisser.&lt;/p&gt;
+
+&lt;h2 id=&quot;sauvegarde-et-export&quot;&gt;Sauvegarde et export&lt;/h2&gt;
+
+&lt;p&gt;Les modifications apportées au colloscope sont éphémères et doivent être enregistrées (bouton “Enregistrer”). Les modifications courantes peuvent être annulées (bouton “Annuler”) pour revenir à la dernière sauvegarde.
+Quand le colloscope est prêt, vous pouvez l’exporter (bouton “Exporter”) au format HTML. Obtenir un PDF se fait facilement en ouvrant les fichiers générés avec le navigateur de votre choix et en imprimant dans un fichier.&lt;/p&gt;</content><author><name></name></author><category term="kolir" /><category term="notice" /><category term="tutoriel" /><summary type="html">Kolir est organisée en trois vues, chacune exposant le même colloscope d’une manière particulière.</summary></entry><entry><title type="html">Version bêta</title><link href="http://localhost:4000/kolir/kolir/beta/2022/09/11/version-beta.html" rel="alternate" type="text/html" title="Version bêta" /><published>2022-09-11T19:28:02+02:00</published><updated>2022-09-11T19:28:02+02:00</updated><id>http://localhost:4000/kolir/kolir/beta/2022/09/11/version-beta</id><content type="html" xml:base="http://localhost:4000/kolir/kolir/beta/2022/09/11/version-beta.html">&lt;p&gt;La version bêta est disponible pour Windows &lt;a href=&quot;http://localhost:4000/bin/kolir.msix&quot;&gt;ici&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Une brêve notice d’utilisation est &lt;a href=&quot;/kolir/notice/tutoriel/2022/09/11/notice.html&quot;&gt;disponible&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Tous les retours sont les bienvenus !&lt;/p&gt;</content><author><name></name></author><category term="kolir" /><category term="beta" /><summary type="html">La version bêta est disponible pour Windows ici.</summary></entry></feed>
