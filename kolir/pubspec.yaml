@@ -53,6 +53,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
   test: ^1.21.4
+  msix: ^2.8.18
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -94,3 +95,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+# Packaging options for Windows
+msix_config:
+  display_name: Kolir
+  publisher_display_name: Benoit Kugler
+  identity_name: benoit.kugler.kolir
+  msix_version: 1.0.0.0
+  logo_path: C:\Users\User\kolir\kolir.png
+  store: false
