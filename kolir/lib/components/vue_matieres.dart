@@ -39,17 +39,17 @@ class VueMatiereW extends StatelessWidget {
       child: Expanded(
           child: ListView(
         key: const PageStorageKey("list_matiere"),
-        children: entries
+        children: matieresList.values
             .map((e) => _MatiereW(
                   horaires,
-                  matieresList.values[e.key],
-                  e.value,
-                  (h, s, c) => onAdd(e.key, h, s, c),
-                  (index) => onDeleteCreneau(e.key, index),
-                  (index) => onDeleteSemaine(e.key, index),
-                  (index, colleur) => onEditColleur(e.key, index, colleur),
+                  e,
+                  byMatieres[e.index] ?? [],
+                  (h, s, c) => onAdd(e.index, h, s, c),
+                  (index) => onDeleteCreneau(e.index, index),
+                  (index) => onDeleteSemaine(e.index, index),
+                  (index, colleur) => onEditColleur(e.index, index, colleur),
                   (nombre, periode) =>
-                      onRepeteMotifCourant(e.key, nombre, periode),
+                      onRepeteMotifCourant(e.index, nombre, periode),
                 ))
             .toList(),
       )),
