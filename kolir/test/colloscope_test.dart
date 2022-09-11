@@ -11,7 +11,15 @@ import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
 final sample = Colloscope({}, const [Groupe(1), Groupe(2), Groupe(3)]);
-
+const colors = const [
+  Color(0xFF90CAF9),
+  Color(0xFFA5D6A7),
+  Color(0xFFFFB74D),
+  Color(0xFFFFF176),
+  Color(0xFFF06292),
+  Color(0xFFBA68C8),
+  Color(0xFF4DB6AC),
+];
 void main() {
   test("Colloscope JSON", () {
     final cl = sample;
@@ -33,21 +41,13 @@ void main() {
   });
 
   test("Export groupes", () async {
-    final html = groupesToHTML(sample);
+    final html = groupesToHTML(sample, colors);
     final path = await saveDocument(html, "groupes.html");
     print("Saved in $path");
   });
 
   test("Export semaines", () async {
-    final html = semainesToHTML(sample, const [
-      Color(0xFF90CAF9),
-      Color(0xFFA5D6A7),
-      Color(0xFFFFB74D),
-      Color(0xFFFFF176),
-      Color(0xFFF06292),
-      Color(0xFFBA68C8),
-      Color(0xFF4DB6AC),
-    ]);
+    final html = semainesToHTML(sample, colors);
     final path = await saveDocument(html, "semaines.html");
     print("Saved in $path");
   });

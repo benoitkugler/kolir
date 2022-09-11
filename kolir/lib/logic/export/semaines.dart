@@ -40,7 +40,8 @@ String semainesToHTML(Colloscope col, List<Color> matieresColors) {
     </table>
     """;
 
-  final style = cssMatieresColorDefinition(matieresColors);
+  final style = cssMatieresColorDefinition(
+      matieresColors.map((c) => c.withOpacity(0.8)).toList());
   const lowerSize = "body { font-size: 9pt}";
   return fillTemplate([page], additionalStyle: "$style \n $lowerSize");
 }

@@ -89,7 +89,7 @@ Future<String> saveDocument(String content, String name) async {
 }
 
 String _colorToHTML(Color color) {
-  return "rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})";
+  return "rgba(${color.red}, ${color.green}, ${color.blue}, ${color.opacity})";
 }
 
 /// [colors] is the list of the colors class for each matieres

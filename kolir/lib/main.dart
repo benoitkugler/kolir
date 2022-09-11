@@ -186,10 +186,11 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
   }
 
   void _export() async {
+    final colors =
+        currentColloscope.matieresList.values.map((m) => m.color).toList();
     final matieres = matieresToHTML(currentColloscope);
-    final groupes = groupesToHTML(currentColloscope);
-    final semaines = semainesToHTML(currentColloscope,
-        currentColloscope.matieresList.values.map((m) => m.color).toList());
+    final groupes = groupesToHTML(currentColloscope, colors);
+    final semaines = semainesToHTML(currentColloscope, colors);
 
     final matieresPath =
         await saveDocument(matieres, "colloscope_matieres.html");
