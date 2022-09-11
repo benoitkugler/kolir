@@ -18,7 +18,7 @@ email: benoit-marc.kugler@ac-creteil.fr
 description: >- # this means to ignore newlines until "baseurl:"
   Page de présentation de l'application Kolir, une appli. de bureau 
   pour faciliter la création de programme de colles en CPGE (colloscope).
-baseurl: "/kolir" # the subpath of your site, e.g. /blog
+baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://benoitkugler.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 github_username: benoitkugler
 lang: fr
