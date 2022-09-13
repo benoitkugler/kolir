@@ -4,6 +4,7 @@ import 'package:kolir/components/vue_groupes.dart';
 import 'package:kolir/components/vue_matieres.dart';
 import 'package:kolir/components/vue_semaines.dart';
 import 'package:kolir/logic/colloscope.dart';
+import 'package:kolir/logic/export/creneaux.dart';
 import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
@@ -191,16 +192,19 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     final matieres = matieresToHTML(currentColloscope);
     final groupes = groupesToHTML(currentColloscope, colors);
     final semaines = semainesToHTML(currentColloscope, colors);
+    final creneaux = creneauxToHTML(currentColloscope, colors);
 
     final matieresPath =
         await saveDocument(matieres, "colloscope_matieres.html");
     final groupesPath = await saveDocument(groupes, "colloscope_groupes.html");
     final semainesPath =
         await saveDocument(semaines, "colloscope_semaines.html");
+    final creneauxPath =
+        await saveDocument(creneaux, "colloscope_creneaux.html");
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath"),
+            "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath \n$creneauxPath"),
         backgroundColor: Colors.green));
   }
 
@@ -269,12 +273,15 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                     onPressed: () => Navigator.of(context).pop(true),
                     child: const Text("Enregistrer"))
               ],
-              content: TextFormField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    label: Text("Notes libres"),
-                  ),
-                  maxLines: 15));
+              content: SizedBox(
+                width: 800,
+                child: TextFormField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      label: Text("Notes libres"),
+                    ),
+                    maxLines: 15),
+              ));
         });
     if (save != null && save) {
       _saveNotes();

@@ -231,6 +231,31 @@ class Colloscope {
     return _semaineMapToList(semaines);
   }
 
+  /// [creneaux] renvoit les créneaux utilisés, ramenés sur une semaine,
+  /// et classéss par jour de la semaine puis par heure
+  Map<int, List<List<Colle>>> creneaux() {
+    final out = <int, Set<WeeklyCreneauID>>{};
+    final mm = _matiereMap;
+    for (var entry in _matieres.entries) {
+      final matiereID = entry.key;
+      for (var creneau in entry.value) {
+        final set = out.putIfAbsent(creneau.date.weekday, () => {});
+        final key = WeeklyCreneauID(
+            matiereID, creneau.date.hour, creneau.date.minute, creneau.colleur);
+        set.add(key);
+      }
+    }
+    return out.map((key, value) {
+      final l = value
+          .map((e) => Colle(-1, DateHeure(1, key, e.hour, e.minute),
+              mm[e.matiereID]!, e.colleur))
+          .toList();
+      l.sort((a, b) => a.date.compareTo(b.date));
+      final byDateHeure = l.groupListsBy((colle) => colle.date).values.toList();
+      return MapEntry(key, byDateHeure);
+    });
+  }
+
   /// les créneaux non attribués sont ignorés
   Map<GroupeID, VueGroupe> parGroupe() {
     return Map.fromEntries(
@@ -517,6 +542,27 @@ class CreneauID {
   final MatiereID matiere;
   final int index;
   const CreneauID(this.matiere, this.index);
+}
+
+class WeeklyCreneauID {
+  final MatiereID matiereID;
+  final int hour;
+  final int minute;
+  final String colleur;
+  const WeeklyCreneauID(this.matiereID, this.hour, this.minute, this.colleur);
+
+  @override
+  bool operator ==(Object other) =>
+      other is WeeklyCreneauID &&
+      other.runtimeType == runtimeType &&
+      other.matiereID == matiereID &&
+      other.hour == hour &&
+      other.minute == minute &&
+      other.colleur == colleur;
+
+  @override
+  int get hashCode =>
+      matiereID.hashCode + hour.hashCode + minute.hashCode + colleur.hashCode;
 }
 
 class Colle {

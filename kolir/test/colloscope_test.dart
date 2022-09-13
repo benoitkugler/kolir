@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:kolir/logic/colloscope.dart';
+import 'package:kolir/logic/export/creneaux.dart';
 import 'package:kolir/logic/export/groupes.dart';
 import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
@@ -11,7 +12,7 @@ import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
 final sample = Colloscope({}, const [Groupe(1), Groupe(2), Groupe(3)]);
-const colors = const [
+const colors = [
   Color(0xFF90CAF9),
   Color(0xFFA5D6A7),
   Color(0xFFFFB74D),
@@ -49,6 +50,12 @@ void main() {
   test("Export semaines", () async {
     final html = semainesToHTML(sample, colors);
     final path = await saveDocument(html, "semaines.html");
+    print("Saved in $path");
+  });
+
+  test("Export créneaux", () async {
+    final html = creneauxToHTML(sample, colors);
+    final path = await saveDocument(html, "creneaux.html");
     print("Saved in $path");
   });
 
