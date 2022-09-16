@@ -19,6 +19,8 @@ class VueMatiereW extends StatelessWidget {
   final void Function(MatiereID mat, int semaine) onDeleteSemaine;
   final void Function(MatiereID mat, int creneauIndex, String colleur)
       onEditColleur;
+  final void Function(MatiereID mat, int creneauIndex, String salle)
+      onEditSalle;
   final void Function(MatiereID mat, int nombre, int? periode)
       onRepeteMotifCourant;
 
@@ -27,6 +29,7 @@ class VueMatiereW extends StatelessWidget {
       required this.onDeleteCreneau,
       required this.onDeleteSemaine,
       required this.onEditColleur,
+      required this.onEditSalle,
       required this.onRepeteMotifCourant,
       super.key});
 
@@ -40,16 +43,17 @@ class VueMatiereW extends StatelessWidget {
           child: ListView(
         key: const PageStorageKey("list_matiere"),
         children: matieresList.values
-            .map((e) => _MatiereW(
+            .map((mat) => _MatiereW(
                   horaires,
-                  e,
-                  byMatieres[e.index] ?? [],
-                  (h, s, c) => onAdd(e.index, h, s, c),
-                  (index) => onDeleteCreneau(e.index, index),
-                  (index) => onDeleteSemaine(e.index, index),
-                  (index, colleur) => onEditColleur(e.index, index, colleur),
+                  mat,
+                  byMatieres[mat.index] ?? [],
+                  (h, s, c) => onAdd(mat.index, h, s, c),
+                  (index) => onDeleteCreneau(mat.index, index),
+                  (index) => onDeleteSemaine(mat.index, index),
+                  (index, colleur) => onEditColleur(mat.index, index, colleur),
+                  (index, salle) => onEditSalle(mat.index, index, salle),
                   (nombre, periode) =>
-                      onRepeteMotifCourant(e.index, nombre, periode),
+                      onRepeteMotifCourant(mat.index, nombre, periode),
                 ))
             .toList(),
       )),
@@ -131,6 +135,8 @@ class _MatiereW extends StatelessWidget {
   final void Function(int creneauIndex) onDelete;
   final void Function(int semaine) onDeleteSemaine;
   final void Function(int creneauIndex, String colleur) onEditColleur;
+  final void Function(int creneauIndex, String salle) onEditSalle;
+
   final void Function(int nombre, int? periode) onRepeteMotifCourant;
 
   const _MatiereW(
@@ -141,6 +147,7 @@ class _MatiereW extends StatelessWidget {
       this.onDelete,
       this.onDeleteSemaine,
       this.onEditColleur,
+      this.onEditSalle,
       this.onRepeteMotifCourant,
       {super.key});
 
@@ -198,13 +205,13 @@ class _MatiereW extends StatelessWidget {
                               children: [
                                 Wrap(
                                   children: semaine.item
-                                      .map((e) => ColleW(
-                                            e.toColle(matiere),
-                                            showMatiere: false,
-                                            onDelete: (_) => onDelete(e.index),
-                                            onEditColleur: (colleur) =>
-                                                onEditColleur(e.index, colleur),
-                                          ))
+                                      .map((e) => ColleW(e.toColle(matiere),
+                                          showMatiere: false,
+                                          onDelete: (_) => onDelete(e.index),
+                                          onEditColleur: (colleur) =>
+                                              onEditColleur(e.index, colleur),
+                                          onEditSalle: (salle) =>
+                                              onEditSalle(e.index, salle)))
                                       .toList(),
                                 ),
                                 const Spacer(),

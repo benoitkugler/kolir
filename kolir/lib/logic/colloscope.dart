@@ -169,10 +169,16 @@ class Colloscope {
   Map<MatiereID, Matiere> get _matiereMap =>
       Map.fromEntries(matieresList.values.map((e) => MapEntry(e.index, e)));
 
+  // resoud les indirections sur les groupes et matières
   PopulatedCreneau _publy(
       MatiereID matiere, int creneauIndex, _PopulatedCreneau creneau) {
-    return PopulatedCreneau(creneauIndex, creneau.date,
-        _groupeMap[creneau.groupeID], creneau.colleur, _matiereMap[matiere]!);
+    return PopulatedCreneau(
+        creneauIndex,
+        creneau.date,
+        _groupeMap[creneau.groupeID],
+        creneau.colleur,
+        creneau.salle,
+        _matiereMap[matiere]!);
   }
 
   /// [parSemaine] trie les colles par semaine et renvoie une liste
@@ -220,8 +226,8 @@ class Colloscope {
         final cr = element.value[creneauIndex];
         if (cr.groupeID == groupe) {
           final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
-          semaine.add(Colle(
-              creneauIndex, cr.date, matieresList.values[matiere], cr.colleur));
+          semaine.add(Colle(creneauIndex, cr.date, matieresList.values[matiere],
+              cr.colleur, cr.salle));
         }
       }
     }
@@ -240,15 +246,15 @@ class Colloscope {
       final matiereID = entry.key;
       for (var creneau in entry.value) {
         final set = out.putIfAbsent(creneau.date.weekday, () => {});
-        final key = WeeklyCreneauID(
-            matiereID, creneau.date.hour, creneau.date.minute, creneau.colleur);
+        final key = WeeklyCreneauID(matiereID, creneau.date.hour,
+            creneau.date.minute, creneau.colleur, creneau.salle);
         set.add(key);
       }
     }
     return out.map((key, value) {
       final l = value
           .map((e) => Colle(-1, DateHeure(1, key, e.hour, e.minute),
-              mm[e.matiereID]!, e.colleur))
+              mm[e.matiereID]!, e.colleur, e.salle))
           .toList();
       l.sort((a, b) => a.date.compareTo(b.date));
       final byDateHeure = l.groupListsBy((colle) => colle.date).values.toList();
@@ -431,7 +437,7 @@ class Colloscope {
       for (var time in semaineHours) {
         final adjusted =
             DateHeure(semaine, time.weekday, time.hour, time.minute);
-        finalTimes.add(_PopulatedCreneau(adjusted, null, colleur));
+        finalTimes.add(_PopulatedCreneau(adjusted, null, colleur, ""));
       }
     }
 
@@ -465,6 +471,19 @@ class Colloscope {
     final l = _matieres[mat] ?? [];
     final cr = l[creneauIndex];
     cr.colleur = colleur;
+  }
+
+  /// modifie les salles de tous les créneaux ayant les mêmes jour, moment et colleur
+  /// que le créneau identifié par [creneauxIndex]
+  void editCreneauxSalle(MatiereID mat, int creneauxIndex, String salle) {
+    final l = _matieres[mat] ?? [];
+    final ref = l[creneauxIndex];
+    for (var cr in l) {
+      if (cr.colleur == ref.colleur &&
+          cr.date.copyWithWeek(1) == ref.date.copyWithWeek(1)) {
+        cr.salle = salle;
+      }
+    }
   }
 
   /// [setupAttribueAuto] prépare l'attribution des créneaux donnés,
@@ -513,7 +532,7 @@ class Colloscope {
       return;
     }
     final pattern = l
-        .map((e) => _PopulatedCreneau(e.date, null, e.colleur))
+        .map((e) => _PopulatedCreneau(e.date, null, e.colleur, e.salle))
         .toList(); // copy to avoid side effects
     for (var periodOffset = 1; periodOffset <= nombre; periodOffset++) {
       l.addAll(pattern.map(
@@ -549,7 +568,9 @@ class WeeklyCreneauID {
   final int hour;
   final int minute;
   final String colleur;
-  const WeeklyCreneauID(this.matiereID, this.hour, this.minute, this.colleur);
+  final String salle;
+  const WeeklyCreneauID(
+      this.matiereID, this.hour, this.minute, this.colleur, this.salle);
 
   @override
   bool operator ==(Object other) =>
@@ -558,11 +579,16 @@ class WeeklyCreneauID {
       other.matiereID == matiereID &&
       other.hour == hour &&
       other.minute == minute &&
-      other.colleur == colleur;
+      other.colleur == colleur &&
+      other.salle == salle;
 
   @override
   int get hashCode =>
-      matiereID.hashCode + hour.hashCode + minute.hashCode + colleur.hashCode;
+      matiereID.hashCode +
+      hour.hashCode +
+      minute.hashCode +
+      colleur.hashCode +
+      salle.hashCode;
 }
 
 class Colle {
@@ -570,7 +596,9 @@ class Colle {
   final DateHeure date;
   final Matiere matiere;
   final String colleur;
-  const Colle(this.creneauxIndex, this.date, this.matiere, this.colleur);
+  final String salle;
+  const Colle(
+      this.creneauxIndex, this.date, this.matiere, this.colleur, this.salle);
 }
 
 typedef VueGroupe = List<SemaineTo<List<Colle>>>; // semaines => colles
@@ -589,12 +617,14 @@ class _PopulatedCreneau {
   final DateHeure date;
   GroupeID? groupeID;
   String colleur;
+  String salle;
   final String notes;
 
-  _PopulatedCreneau(this.date, this.groupeID, this.colleur, {this.notes = ""});
+  _PopulatedCreneau(this.date, this.groupeID, this.colleur, this.salle,
+      {this.notes = ""});
 
   _PopulatedCreneau copy() {
-    return _PopulatedCreneau(date, groupeID, colleur, notes: notes);
+    return _PopulatedCreneau(date, groupeID, colleur, salle, notes: notes);
   }
 
   Map<String, dynamic> toJson() {
@@ -602,13 +632,14 @@ class _PopulatedCreneau {
       "date": date.toJson(),
       "groupeID": groupeID,
       "colleur": colleur,
+      "salle": salle,
       "notes": notes,
     };
   }
 
   factory _PopulatedCreneau.fromJson(Map<String, dynamic> json) {
     return _PopulatedCreneau(DateHeure.fromJson(json["date"]), json["groupeID"],
-        json["colleur"] ?? "",
+        json["colleur"] ?? "", json["salle"] ?? "",
         notes: json["notes"] ?? "");
   }
 
@@ -618,15 +649,21 @@ class _PopulatedCreneau {
       other.runtimeType == runtimeType &&
       other.date == date &&
       other.groupeID == groupeID &&
-      other.colleur == colleur &&
+      other.groupeID == groupeID &&
+      other.salle == salle &&
       other.notes == notes;
 
   @override
   int get hashCode =>
-      date.hashCode + groupeID.hashCode + colleur.hashCode + notes.hashCode;
+      date.hashCode +
+      groupeID.hashCode +
+      colleur.hashCode +
+      salle.hashCode +
+      notes.hashCode;
 
   _PopulatedCreneau _copyWithWeek(int semaine) {
-    return _PopulatedCreneau(date.copyWithWeek(semaine), groupeID, colleur,
+    return _PopulatedCreneau(
+        date.copyWithWeek(semaine), groupeID, colleur, salle,
         notes: notes);
   }
 }
@@ -638,12 +675,13 @@ class PopulatedCreneau {
   final DateHeure date;
   final Groupe? groupe;
   final String colleur;
+  final String salle;
   final Matiere matiere;
 
-  const PopulatedCreneau(
-      this.index, this.date, this.groupe, this.colleur, this.matiere);
+  const PopulatedCreneau(this.index, this.date, this.groupe, this.colleur,
+      this.salle, this.matiere);
 
-  Colle toColle(Matiere matiere) => Colle(index, date, matiere, colleur);
+  Colle toColle(Matiere matiere) => Colle(index, date, matiere, colleur, salle);
 
   CreneauID get id => CreneauID(matiere.index, index);
 }

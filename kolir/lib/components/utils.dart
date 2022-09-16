@@ -153,9 +153,14 @@ class ColleW extends StatefulWidget {
 
   final void Function(bool allMatiere)? onDelete;
   final void Function(String)? onEditColleur;
+  final void Function(String)? onEditSalle;
 
   const ColleW(this.colle,
-      {this.showMatiere = true, this.onDelete, this.onEditColleur, super.key});
+      {this.showMatiere = true,
+      this.onDelete,
+      this.onEditColleur,
+      this.onEditSalle,
+      super.key});
 
   @override
   State<ColleW> createState() => _ColleWState();
@@ -163,6 +168,7 @@ class ColleW extends StatefulWidget {
 
 class _ColleWState extends State<ColleW> {
   var colleurController = TextEditingController();
+  var salleController = TextEditingController();
 
   void showEditColleur() async {
     colleurController.text = widget.colle.colleur;
@@ -190,8 +196,36 @@ class _ColleWState extends State<ColleW> {
     }
   }
 
+  void showEditSalle() async {
+    salleController.text = widget.colle.salle;
+    salleController.selection =
+        TextSelection(baseOffset: 0, extentOffset: salleController.text.length);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "Modifier la salle",
+        ),
+        actions: [
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Valider"))
+        ],
+        content: TextFormField(
+            autofocus: true,
+            controller: salleController,
+            decoration: const InputDecoration(labelText: "Salle de colle")),
+      ),
+    );
+    if (ok != null) {
+      widget.onEditSalle!(salleController.text);
+    }
+  }
+
   bool get showMenuDetails =>
-      widget.onDelete != null && widget.onEditColleur != null;
+      widget.onDelete != null &&
+      widget.onEditColleur != null &&
+      widget.onEditSalle != null;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +241,14 @@ class _ColleWState extends State<ColleW> {
                 onTap: () => Future.delayed(const Duration(), showEditColleur),
                 child: const ListTile(
                   title: Text("Modifier le colleur"),
+                  horizontalTitleGap: 10,
+                  minLeadingWidth: 0,
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () => Future.delayed(const Duration(), showEditSalle),
+                child: const ListTile(
+                  title: Text("Modifier la salle"),
                   horizontalTitleGap: 10,
                   minLeadingWidth: 0,
                 ),
