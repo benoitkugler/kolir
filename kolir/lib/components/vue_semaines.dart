@@ -8,11 +8,13 @@ class VueSemaineW extends StatefulWidget {
   final MatiereProvider matieresList;
   final int creneauxVaccants;
   final List<SemaineTo<VueSemaine>> semaines;
+  final SemaineProvider semainesDates;
 
   final void Function(CreneauID src, CreneauID dst) onPermuteCreneauxGroupe;
+  final Function(Map<int, DateTime>) onEditCalendrier;
 
   const VueSemaineW(this.matieresList, this.creneauxVaccants, this.semaines,
-      this.onPermuteCreneauxGroupe,
+      this.semainesDates, this.onPermuteCreneauxGroupe, this.onEditCalendrier,
       {super.key});
 
   @override
@@ -21,6 +23,16 @@ class VueSemaineW extends StatefulWidget {
 
 class _VueSemaineWState extends State<VueSemaineW> {
   GroupeID? hoveredGroupe;
+
+  _showEditSemaines() async {
+    final res = await showDialog<Map<int, DateTime>>(
+        context: context,
+        builder: (context) => _SemaineProviderEditor(widget.semainesDates, (m) {
+              Navigator.of(context).pop(m);
+            }));
+    if (res == null) return;
+    widget.onEditCalendrier(res);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +50,9 @@ class _VueSemaineWState extends State<VueSemaineW> {
                   ? "${widget.creneauxVaccants} créneau${plural ? 'x' : ''} vaccant${plural ? 's' : ''}"
                   : "Tous les créneaux sont attribués."),
             ),
-          )
+          ),
+          ElevatedButton(
+              onPressed: _showEditSemaines, child: const Text("Calendrier"))
         ],
         child: NotificationListener<_NotifPermute>(
           onNotification: (notification) {
@@ -60,7 +74,11 @@ class _VueSemaineWState extends State<VueSemaineW> {
                       .map((e) => SemaineTo(
                           e.semaine,
                           _SemaineBody(
-                              widget.matieresList, e.item, hoveredGroupe)))
+                              widget.semainesDates,
+                              widget.matieresList,
+                              e.semaine,
+                              e.item,
+                              hoveredGroupe)))
                       .toList(),
                   "Aucune colle n'est prévue.",
                 ),
@@ -73,11 +91,14 @@ class _VueSemaineWState extends State<VueSemaineW> {
 
 // présente les créneaux par jour
 class _SemaineBody extends StatelessWidget {
+  final SemaineProvider calendrier;
   final MatiereProvider matieresList;
+  final int week;
   final VueSemaine semaine;
   final GroupeID? hoveredGroupe;
 
-  const _SemaineBody(this.matieresList, this.semaine, this.hoveredGroupe,
+  const _SemaineBody(this.calendrier, this.matieresList, this.week,
+      this.semaine, this.hoveredGroupe,
       {super.key});
 
   List<List<PopulatedCreneau>> weekdayCreneaux(int weekday) {
@@ -105,8 +126,8 @@ class _SemaineBody extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: weekdays
-              .map((weekday) =>
-                  _WeekdayW(weekday, weekdayCreneaux(weekday), hoveredGroupe))
+              .map((weekday) => _WeekdayW(calendrier.dateFor(week, weekday),
+                  weekdayCreneaux(weekday), hoveredGroupe))
               .toList(),
         ),
       ),
@@ -115,10 +136,10 @@ class _SemaineBody extends StatelessWidget {
 }
 
 class _WeekdayW extends StatelessWidget {
-  final int weekday;
+  final DateTime day;
   final List<List<PopulatedCreneau>> creneaux;
   final GroupeID? currentGroup;
-  const _WeekdayW(this.weekday, this.creneaux, this.currentGroup, {super.key});
+  const _WeekdayW(this.day, this.creneaux, this.currentGroup, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +153,7 @@ class _WeekdayW extends StatelessWidget {
         child: Column(children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Text(formatWeekday(weekday, dense: false),
-                style: const TextStyle(fontSize: 16)),
+            child: Text(formatDate(day), style: const TextStyle(fontSize: 16)),
           ),
           if (creneaux.isEmpty)
             const Padding(
@@ -209,6 +229,132 @@ class _GroupColle extends StatelessWidget {
           ),
         ),
         onAccept: (src) => _NotifPermute(src, creneau.id).dispatch(context),
+      ),
+    );
+  }
+}
+
+class _SemaineProviderEditor extends StatefulWidget {
+  final SemaineProvider semaines;
+  final Function(Map<int, DateTime>) onSave;
+
+  const _SemaineProviderEditor(this.semaines, this.onSave, {super.key});
+
+  @override
+  State<_SemaineProviderEditor> createState() => __SemaineProviderEditorState();
+}
+
+class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
+  late final List<MapEntry<int, DateTime>> edited;
+
+  @override
+  void initState() {
+    edited = widget.semaines.mondays.entries.toList();
+    edited.sort(((a, b) => a.key - b.key));
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SemaineProviderEditor oldWidget) {
+    edited = widget.semaines.mondays.entries.toList();
+    edited.sort(((a, b) => a.key - b.key));
+    super.didUpdateWidget(oldWidget);
+  }
+
+  deleteEntry(int index) {
+    setState(() {
+      edited.removeAt(index);
+    });
+  }
+
+  addEntry() {
+    setState(() {
+      edited.add(MapEntry(1, DateTime.now()));
+    });
+  }
+
+  onEditSemaine(int index, String newValue) {
+    final newValueInt = int.tryParse(newValue);
+    if (newValueInt == null) return;
+    if (edited.map((e) => e.key).contains(newValueInt)) return;
+    setState(() {
+      edited[index] = MapEntry(newValueInt, edited[index].value);
+    });
+  }
+
+  onEditMonday(int index, String newDate) {
+    final chunks = newDate.split("/");
+    if (chunks.length != 3) return;
+    final day = int.tryParse(chunks[0]);
+    final month = int.tryParse(chunks[1]);
+    final year = int.tryParse(chunks[2]);
+    if (day == null || month == null || year == null) return;
+    setState(() {
+      edited[index] = MapEntry(edited[index].key, DateTime(year, month, day));
+    });
+  }
+
+  saveAndClose() {
+    widget.onSave(Map.fromEntries(edited));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Editer le calendrier"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          edited.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Text("Aucun semaine n'est encore définie."),
+                )
+              : SizedBox(
+                  width: 500,
+                  height: 300,
+                  child: ListView(
+                      shrinkWrap: true,
+                      children: List<Widget>.generate(edited.length, (index) {
+                        final e = edited[index];
+                        final time = e.value;
+                        return ListTile(
+                          leading: SizedBox(
+                            width: 100,
+                            child: TextFormField(
+                              decoration:
+                                  const InputDecoration(prefixText: "Semaine "),
+                              keyboardType: TextInputType.number,
+                              initialValue: e.key.toString(),
+                              onChanged: (s) => onEditSemaine(index, s),
+                            ),
+                          ),
+                          title: TextFormField(
+                            textAlign: TextAlign.center,
+                            decoration:
+                                const InputDecoration(hintText: "JJ/MM/AAAA"),
+                            initialValue:
+                                "${time.day}/${time.month}/${time.year}",
+                            onChanged: (s) => onEditMonday(index, s),
+                          ),
+                          trailing: IconButton(
+                              onPressed: () => deleteEntry(index),
+                              icon:
+                                  const Icon(Icons.delete, color: Colors.red)),
+                        );
+                      }).toList()),
+                ),
+          ElevatedButton(
+            onPressed: addEntry,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text("Ajouter"),
+          ),
+          ElevatedButton(
+            onPressed: saveAndClose,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: const Text("Enregistrer"),
+          ),
+        ],
       ),
     );
   }

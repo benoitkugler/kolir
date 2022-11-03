@@ -35,7 +35,6 @@ class VueMatiereW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = byMatieres.entries.toList();
     return VueSkeleton(
       mode: ModeView.matieres,
       actions: const [],

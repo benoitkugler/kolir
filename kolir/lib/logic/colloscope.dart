@@ -65,20 +65,25 @@ bool _areMatieresEqual(
 /// Il peut être enregistré (au format JSON), et affiché
 /// sous différente formes (par matière, par semaine, par élève)
 class Colloscope {
-  final Map<MatiereID, _Creneaux> _matieres;
+  final Map<MatiereID, _Creneaux> _matieres; // repartition des heures
 
   final List<Groupe> groupes;
 
   CreneauHoraireProvider creneauxHoraires;
   MatiereProvider matieresList;
+  SemaineProvider semaines;
 
   /// [notes] est un champ de texte libre.
   String notes;
 
-  Colloscope(this._matieres, this.groupes,
-      {this.notes = "",
-      this.creneauxHoraires = defautHoraires,
-      this.matieresList = defautMatieres}) {
+  Colloscope(
+    this._matieres,
+    this.groupes, {
+    this.notes = "",
+    this.creneauxHoraires = defautHoraires,
+    this.matieresList = defautMatieres,
+    this.semaines = const SemaineProvider({}),
+  }) {
     matieresList = defautMatieres;
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
@@ -99,6 +104,7 @@ class Colloscope {
       groupes.toList(),
       creneauxHoraires: creneauxHoraires.copy(),
       matieresList: matieresList.copy(),
+      semaines: semaines.copy(),
       notes: notes,
     );
   }
@@ -108,7 +114,8 @@ class Colloscope {
       other.groupes.equals(groupes) &&
       other.creneauxHoraires.equals(creneauxHoraires) &&
       other.matieresList.equals(matieresList) &&
-      other.notes == notes;
+      other.notes == notes &&
+      other.semaines.equals(semaines);
 
   Map<String, dynamic> toJson() {
     return {
@@ -117,6 +124,7 @@ class Colloscope {
       "groupes": groupes.map((e) => e.toJson()).toList(),
       "creneauxHoraires": creneauxHoraires.toJson(),
       "matieresList": matieresList.toJson(),
+      "semaines": semaines.toJson(),
       "notes": notes,
     };
   }
@@ -136,6 +144,9 @@ class Colloscope {
         matieresList: json["matieresList"] == null
             ? defautMatieres
             : MatiereProvider.fromJson(json["matieresList"]),
+        semaines: json["semaines"] == null
+            ? const SemaineProvider({})
+            : SemaineProvider.fromJson(json["semaines"]),
         notes: json["notes"] ?? "");
   }
 

@@ -29,6 +29,10 @@ String formatWeekday(int weekday, {dense = true}) {
   return _daysLong[weekday];
 }
 
+String formatDate(DateTime date, {dense = false}) {
+  return "${formatWeekday(date.weekday, dense: dense)} ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
+}
+
 String _formatHeure(int hour, int minute) {
   return "${hour}h${minute.toString().padLeft(2, "0")}";
 }
@@ -43,6 +47,8 @@ bool isEmptyDate(DateHeure dt) {
 
 /// DateHeure est une version simplifiée de DateTime,
 /// qui se réfère aux semaines du colloscope.
+/// La correspondance avec les jours du calendrier réel
+/// est donnée par le [SemaineProvider] du colloscope
 class DateHeure implements Comparable<DateHeure> {
   /// comme affichée à l'écran
   final int semaine;

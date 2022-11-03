@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class CreneauHoraireData {
@@ -172,3 +173,57 @@ const defautMatieres = MatiereProvider([
   Matiere(5, "Francais", "Fran.", Color(0xFFBA68C8)),
   Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58)),
 ]);
+
+final _defautFirstMonday = DateTime(2022, DateTime.september, 5);
+
+/// [SemaineProvider] spécifie le jour du calendrier réel
+/// associé à chaque lundi, permettant de prendre en compte
+/// les vacances tout en raisonnant simplement en terme de semaines
+/// effectivement travaillées.
+/// Seule la première semaine doit être spécifiée, les suivantes
+/// étant par défaut considérées comme consécutives.
+/// Si elle ne l'est pas une date arbitraire est utilisée
+class SemaineProvider {
+  final Map<int, DateTime> mondays;
+  const SemaineProvider(this.mondays);
+
+  Map<String, dynamic> toJson() {
+    return mondays.map((k, v) => MapEntry(k.toString(), v.toIso8601String()));
+  }
+
+  factory SemaineProvider.fromJson(dynamic json) {
+    return SemaineProvider((json as Map<String, dynamic>)
+        .map((k, v) => MapEntry(int.parse(k), DateTime.parse(v))));
+  }
+
+  SemaineProvider copy() {
+    return SemaineProvider(mondays.map((k, v) => MapEntry(k, v)));
+  }
+
+  bool equals(SemaineProvider other) {
+    return mapEquals(mondays, other.mondays);
+  }
+
+  /// [dateFor] renvoie le jour réel pour la semaine et le jour donnés
+  DateTime dateFor(int semaine, int weekday) {
+    // on considère uniquement les semaines avant celle demandée
+    final providedWeeks = mondays.keys.where((s) => s <= semaine).toList();
+
+    final int refWeek;
+    final DateTime monday;
+    if (providedWeeks.isEmpty) {
+      // utilise un début arbitraire
+      refWeek = 1;
+      monday = _defautFirstMonday;
+    } else {
+      // trouve la semaine donnée juste avant la semaine demandée
+      refWeek = providedWeeks.max;
+      monday = mondays[refWeek]!;
+    }
+
+    // calcule le jour réel par rapport à la référence
+    final offsetWeek = semaine - refWeek;
+    final offsetDay = weekday - 1; // lundi
+    return monday.add(Duration(days: offsetWeek * 7 + offsetDay));
+  }
+}

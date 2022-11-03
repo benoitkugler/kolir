@@ -192,6 +192,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void editCalendrier(Map<int, DateTime> m) {
+    setState(() {
+      currentColloscope.semaines = SemaineProvider(m);
+    });
+  }
+
   void _export() async {
     final colors =
         currentColloscope.matieresList.values.map((m) => m.color).toList();
@@ -221,7 +227,9 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           currentColloscope.matieresList,
           currentColloscope.nbCreneauxVaccants(),
           currentColloscope.parSemaine(),
+          currentColloscope.semaines,
           permuteCreneauxGroupe,
+          editCalendrier,
         );
       case ModeView.groupes:
         return VueGroupeW(

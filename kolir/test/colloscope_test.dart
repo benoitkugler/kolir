@@ -8,6 +8,7 @@ import 'package:kolir/logic/export/matieres.dart';
 import 'package:kolir/logic/export/semaines.dart';
 import 'package:kolir/logic/export/utils.dart';
 import 'package:kolir/logic/rotations.dart';
+import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 import 'package:test/test.dart';
 
@@ -72,5 +73,22 @@ void main() {
     ];
     print(generateCombinaisons(l));
     expect(generateCombinaisons(l).length, equals(numberOfCombinaisons(l)));
+  });
+
+  test("Semaines", () {
+    final sf = SemaineProvider({
+      1: DateTime(2022, DateTime.november, 7),
+      3: DateTime(2022, DateTime.december, 5),
+    });
+    expect(sf.dateFor(1, 1), equals(DateTime(2022, DateTime.november, 7)));
+    expect(sf.dateFor(1, 3), equals(DateTime(2022, DateTime.november, 9)));
+    expect(sf.dateFor(2, 3), equals(DateTime(2022, DateTime.november, 16)));
+    expect(sf.dateFor(4, 1), equals(DateTime(2022, DateTime.december, 12)));
+
+    final sf2 = SemaineProvider({
+      1: DateTime(2022, 9, 19),
+      6: DateTime(2022, DateTime.november, 7),
+    });
+    expect(sf2.dateFor(1, 1), equals(DateTime(2022, 9, 19)));
   });
 }
