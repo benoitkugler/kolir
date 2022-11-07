@@ -339,21 +339,27 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
                           ),
                           trailing: IconButton(
                               onPressed: () => deleteEntry(index),
+                              splashRadius: 20,
                               icon:
                                   const Icon(Icons.delete, color: Colors.red)),
                         );
                       }).toList()),
                 ),
-          ElevatedButton(
-            onPressed: addEntry,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text("Ajouter"),
-          ),
-          ElevatedButton(
-            onPressed: saveAndClose,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text("Enregistrer"),
-          ),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: addEntry,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: const Text("Ajouter une semaine"),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                onPressed: saveAndClose,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: const Text("Enregistrer"),
+              ),
+            ],
+          )
         ],
       ),
     );
