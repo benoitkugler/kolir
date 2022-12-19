@@ -33,6 +33,10 @@ String formatDate(DateTime date, {dense = false}) {
   return "${formatWeekday(date.weekday, dense: dense)} ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
 }
 
+String formatDateTime(DateTime date, DateHeure time) {
+  return "${formatDate(date, dense: true)} à ${time.formatHeure()}";
+}
+
 String _formatHeure(int hour, int minute) {
   return "${hour}h${minute.toString().padLeft(2, "0")}";
 }

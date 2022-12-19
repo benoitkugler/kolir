@@ -14,7 +14,7 @@ String matieresToHTML(Colloscope col) {
     final rows = item.value.map((semaine) {
       final creneaux = semaine.item.map((e) {
         final time = col.semaines.dateFor(e.date.semaine, e.date.weekday);
-        return "<div class='chip'><b>${e.groupe?.name ?? ''}</b> ${formatDate(time, dense: true)} à ${e.date.formatHeure()} - <i>${e.colleur}</i></div>";
+        return "<div class='chip'><b>${e.groupe?.name ?? ''}</b> ${formatDateTime(time, e.date)} - <i>${e.colleur}</i></div>";
       });
       return """
       <tr>

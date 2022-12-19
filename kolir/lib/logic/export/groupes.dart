@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/export/utils.dart';
+import 'package:kolir/logic/utils.dart';
 
 /// [groupesToHTML] imprime le programme de colle,
 /// une page par groupe
@@ -13,8 +14,10 @@ String groupesToHTML(Colloscope col, List<Color> matieresColors) {
     final groupeID = item.key;
 
     final rows = item.value.map((semaine) {
-      final creneaux = semaine.item.map((cr) =>
-          "<div class='chip matiere-${cr.matiere.index}'>${cr.matiere.format(dense: true)} ${cr.date.formatDateHeure()} - <i>${cr.colleur}</i></div>");
+      final creneaux = semaine.item.map((cr) {
+        final time = col.semaines.dateFor(cr.date.semaine, cr.date.weekday);
+        return "<div class='chip matiere-${cr.matiere.index}'>${cr.matiere.format(dense: true)} ${formatDateTime(time, cr.date)} - <i>${cr.colleur}</i></div>";
+      });
       return """
       <tr>
         <td>Semaine ${semaine.semaine}</td>
