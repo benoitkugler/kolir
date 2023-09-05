@@ -194,8 +194,10 @@ class Colloscope {
 
   /// [parSemaine] trie les colles par semaine et renvoie une liste
   /// contigue de semaines
-  List<SemaineTo<VueSemaine>> parSemaine() {
-    final semaines = <int, Map<MatiereID, List<PopulatedCreneau>>>{};
+  List<SemaineTo<VueSemaine>> parSemaine() => _semaineMapToList(_semaineMap());
+
+  Map<int, VueSemaine> _semaineMap() {
+    final semaines = <int, VueSemaine>{};
     for (var item in _matieres.entries) {
       final matiere = item.key;
       for (var creneauIndex = 0;
@@ -207,7 +209,7 @@ class Colloscope {
         groupesParMatiere.add(_publy(matiere, creneauIndex, creneau));
       }
     }
-    return _semaineMapToList(semaines);
+    return semaines;
   }
 
   Map<GroupeID, List<DateHeure>> _parGroupes() {
@@ -243,7 +245,7 @@ class Colloscope {
       }
     }
     for (var l in semaines.values) {
-      l.sort((a, b) => a.matiere.index - b.matiere.index);
+      l.sort((a, b) => a.date.compareTo(b.date));
     }
     return _semaineMapToList(semaines);
   }
@@ -370,10 +372,11 @@ class Colloscope {
               .map((e) => e.item.length)
               .reduce((value, element) => value + element);
       final nbWeeks = parSemaine.length;
-      final average = nbColles / nbWeeks;
+      final average = nbWeeks == 0 ? 0 : nbColles / nbWeeks;
+      final maxOK = average.ceil() + 1;
       // plus de 1 d'écart -> surcharge
       final semainesChargees = parSemaine
-          .where((s) => s.item.length > average.ceil() + 1)
+          .where((s) => s.item.length > maxOK)
           .map((s) => s.semaine)
           .toList();
 
@@ -484,7 +487,7 @@ class Colloscope {
     cr.colleur = colleur;
   }
 
-  /// modifie les salles de tous les créneaux ayant les mêmes jour, moment et colleur
+  /// modifie les salles de tous les créneaux (de la matière) ayant les mêmes jour, moment et colleur
   /// que le créneau identifié par [creneauxIndex]
   void editCreneauxSalle(MatiereID mat, int creneauxIndex, String salle) {
     final l = _matieres[mat] ?? [];
@@ -566,6 +569,196 @@ class Colloscope {
       cr.groupeID = null;
     }
   }
+
+  // Colles d'informatique
+
+  AssignmentResult _tryAssign(List<DateHeure> creneaux,
+      List<Set<GroupeID>> blocages, int creneau1, int creneau2) {
+    // apply the forced assignations
+    final blocages1 = blocages[creneau1];
+    final blocages2 = blocages[creneau2];
+    final failed = <GroupeID>[];
+    final assigned1 = <GroupeID>[];
+    final assigned2 = <GroupeID>[];
+    final availableForAll = <GroupeID>[];
+    for (var group in groupes) {
+      final bl1 = blocages1.contains(group.id);
+      final bl2 = blocages2.contains(group.id);
+      if (bl1 && bl2) {
+        // incompatibles
+        failed.add(group.id);
+      } else if (bl1 && !bl2) {
+        // assign to 2
+        assigned2.add(group.id);
+      } else if (!bl1 && bl2) {
+        // assign to 1
+        assigned1.add(group.id);
+      } else {
+        // for now, do not assign
+        availableForAll.add(group.id);
+      }
+    }
+
+    // do we have failures ?
+    if (failed.isNotEmpty) {
+      final gm = _groupeMap;
+      final out = failed.map((e) => gm[e]!).toList();
+      out.sort((a, b) => a.id - b.id);
+      return AssigmentFailure(out);
+    }
+
+    // else, balance
+    final l1 = assigned1.length;
+    final l2 = assigned2.length;
+    final List<int> toDistribute;
+    if (l1 < l2) {
+      // creneau1 is smaller
+      final N = min(l2 - l1, availableForAll.length);
+      final toComplete = availableForAll.sublist(0, N);
+      toDistribute = availableForAll.sublist(N);
+      assigned1.addAll(toComplete);
+    } else {
+      // creneau2 is smaller
+      final N = min(l1 - l2, availableForAll.length);
+      final toComplete = availableForAll.sublist(0, N);
+      toDistribute = availableForAll.sublist(N);
+      assigned2.addAll(toComplete);
+    }
+
+    final halfToDistribute = toDistribute.length ~/ 2;
+    assigned1.addAll(toDistribute.sublist(0, halfToDistribute));
+    assigned2.addAll(toDistribute.sublist(halfToDistribute));
+
+    assigned1.sort();
+    assigned2.sort();
+
+    final gm = _groupeMap;
+    final l = [
+      MapEntry(creneaux[creneau1], assigned1.map((e) => gm[e]!).toList()),
+      MapEntry(creneaux[creneau2], assigned2.map((e) => gm[e]!).toList()),
+    ];
+    l.sort((a, b) => a.key.compareTo(b.key));
+    return AssigmentSuccess(l, gm.length);
+  }
+
+  AssignmentResult _attribueInformatique(
+      InformatiqueParams params, int semaine) {
+    // établit la liste des groupes disponibles sur chaque créneau candidat
+    final byMatiere = _semaineMap()[semaine] ?? {};
+    // creneau identified by its index
+    final blocages =
+        List.generate(params.creneauxCandidats.length, (index) => <GroupeID>{});
+    for (var item in byMatiere.entries) {
+      final matiere = _matiereMap[item.key]!;
+      for (var creneau in item.value) {
+        if (creneau.groupe == null) continue; // créneau attribués seulement
+        final start = creneau.date.toDateTime();
+        final end = start.add(Duration(minutes: matiere.colleDuree));
+        // chevauchement ?
+        for (var i = 0; i < params.creneauxCandidats.length; i++) {
+          final candidat = params.creneauxCandidats[i];
+          final startInfo = candidat.copyWithWeek(semaine).toDateTime();
+          final endInfo = startInfo.add(Duration(minutes: params.colleDuree));
+
+          final hasChevauchement = (start.isBefore(startInfo) ||
+                      start.isAtSameMomentAs(startInfo)) &&
+                  end.isAfter(startInfo) ||
+              (start.isAfter(startInfo) || start.isAtSameMomentAs(startInfo)) &&
+                  start.isBefore(endInfo);
+          if (hasChevauchement) {
+            // le créneau candidat n'est pas dispo
+            blocages[i].add(creneau.groupe!.id);
+          }
+        }
+      }
+    }
+
+    final K = params.nbCreneauToAssign;
+    // for now, we only support K = 2
+    if (K != 2) throw "Only two groups are supported";
+    if (params.creneauxCandidats.length < 2) {
+      throw "At least 2 candidates creaneaux are required";
+    }
+
+    // study each pair of creneau
+    AssigmentSuccess? bestAssign;
+    AssigmentFailure? bestFailure;
+    for (var i = 0; i < params.creneauxCandidats.length; i++) {
+      for (var j = 0; j < i; j++) {
+        final res = _tryAssign(params.creneauxCandidats, blocages, i, j);
+        if (res is AssigmentSuccess) {
+          if (bestAssign == null ||
+              bestAssign._unbalance() > res._unbalance()) {
+            bestAssign = res;
+          }
+          // else   keep the current assign
+        } else if (res is AssigmentFailure) {
+          if (bestFailure == null ||
+              bestFailure._seriouness() > res._seriouness()) {
+            bestFailure = res;
+          }
+          // else   keep the current assign
+        }
+      }
+    }
+    // conclusion : do we have a success ?
+    if (bestAssign != null) return bestAssign;
+    return bestFailure!;
+  }
+
+  /// [previewAttributeInformatique] calcule les créneaux d'informatique
+  /// et les renvoie, sans modifier le colloscope.
+  List<AssignmentResult> previewAttributeInformatique(
+      InformatiqueParams params, int semaineStart, int semaineEnd) {
+    final out = <AssignmentResult>[];
+    for (var semaine = semaineStart; semaine <= semaineEnd; semaine++) {
+      final res = _attribueInformatique(params, semaine);
+      out.add(res);
+    }
+    return out;
+  }
+
+  void attributeInformatique(
+      List<AssigmentSuccess> assignments, int semaineStart, String colleur) {
+    final infoList = _matieres.putIfAbsent(informatiqueID, () => []);
+    for (var i = 0; i < assignments.length; i++) {
+      final semaine = semaineStart + i;
+      final item = assignments[i];
+      for (var creneau in item.groupesForCreneaux) {
+        final dateHeure = creneau.key.copyWithWeek(semaine);
+        final groupes = creneau.value;
+        for (var groupe in groupes) {
+          infoList.add(_PopulatedCreneau(dateHeure, groupe.id, colleur, ""));
+        }
+      }
+    }
+  }
+}
+
+abstract class AssignmentResult {}
+
+class AssigmentSuccess implements AssignmentResult {
+  final List<MapEntry<DateHeure, List<Groupe>>>
+      groupesForCreneaux; // pour chaque créneau à remplir
+  final int nbGroupes;
+
+  AssigmentSuccess(this.groupesForCreneaux, this.nbGroupes);
+
+  int get maxSize => groupesForCreneaux.map((e) => e.value.length).max;
+  bool get hasWarning => maxSize >= (nbGroupes * 0.60).ceil();
+
+  // lower is better
+  int _unbalance() {
+    final ls = groupesForCreneaux.map((e) => e.value.length);
+    return ls.max - ls.min;
+  }
+}
+
+class AssigmentFailure implements AssignmentResult {
+  final List<Groupe> groupes; // les groupes n'ayant aucun créneau de libre
+  AssigmentFailure(this.groupes);
+
+  int _seriouness() => groupes.length;
 }
 
 class CreneauID {

@@ -111,7 +111,7 @@ class DateHeure implements Comparable<DateHeure> {
   }
 
   /// ignore week
-  String formatDateHeure({dense = false}) {
+  String formatDateHeure({bool dense = false}) {
     if (dense) {
       return "${formatWeekday(weekday)} ${_formatHeure(hour, minute)}";
     }

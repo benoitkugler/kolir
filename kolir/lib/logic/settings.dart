@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:kolir/logic/utils.dart';
 
 class CreneauHoraireData {
   final int hour;
@@ -163,18 +164,23 @@ class MatiereProvider {
   }
 }
 
+const MatiereID informatiqueID = 7;
+
 const defautMatieres = MatiereProvider([
   Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1)),
-  Matiere(1, "Economie, Sociologie, Histoire", "ESH", Color(0xFFA5D6A7),
+  Matiere(1, "Economie, Sociologie, Histoire", "ESH",
+      Color.fromARGB(255, 199, 25, 184),
       colleDuree: 80),
   Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
   Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176)),
-  Matiere(4, "Espagnol", "Espa.", Color(0xFFF06292)),
-  Matiere(5, "Francais", "Fran.", Color(0xFFBA68C8)),
+  Matiere(4, "Espagnol", "Espa.", Color.fromARGB(255, 235, 107, 107)),
+  Matiere(5, "Francais", "Fran.", Color.fromARGB(255, 90, 185, 103)),
   Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58)),
+  Matiere(informatiqueID, "Informatique (TP)", "Info.",
+      Color.fromRGBO(18, 203, 228, 1))
 ]);
 
-final _defautFirstMonday = DateTime(2022, DateTime.september, 5);
+final _defautFirstMonday = DateTime(2023, DateTime.september, 4);
 
 /// [SemaineProvider] spécifie le jour du calendrier réel
 /// associé à chaque lundi, permettant de prendre en compte
@@ -226,4 +232,16 @@ class SemaineProvider {
     final offsetDay = weekday - 1; // lundi
     return monday.add(Duration(days: offsetWeek * 7 + offsetDay));
   }
+}
+
+//
+// Informatique
+//
+
+class InformatiqueParams {
+  final List<DateHeure> creneauxCandidats; // la semaine est ignorée
+  final int nbCreneauToAssign; // le nombre de créneaux à définir par semaine
+  final int colleDuree; // durée d'une séance, en minutes (typiquement 55)
+  const InformatiqueParams(
+      this.creneauxCandidats, this.nbCreneauToAssign, this.colleDuree);
 }

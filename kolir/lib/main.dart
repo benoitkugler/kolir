@@ -198,6 +198,14 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void attributeInformatique(
+      List<AssigmentSuccess> assignments, int semaineStart, String colleur) {
+    setState(() {
+      currentColloscope.attributeInformatique(
+          assignments, semaineStart, colleur);
+    });
+  }
+
   void _export() async {
     final colors =
         currentColloscope.matieresList.values.map((m) => m.color).toList();
@@ -247,6 +255,9 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onClearMatiere: clearMatiere,
           onSetupAttribueAuto: currentColloscope.setupAttribueAuto,
           onAttributeAuto: attribueAuto,
+          onPreviewAttributeInformatique:
+              currentColloscope.previewAttributeInformatique,
+          onAttributeInformatique: attributeInformatique,
         );
       case ModeView.matieres:
         return VueMatiereW(

@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-class CreneauxController {
+class CreneauxController extends ChangeNotifier {
   final bool enableDuplicateCreneau;
   List<DateHeure> creneaux = [];
   CreneauxController(this.enableDuplicateCreneau);
 
   void remove(DateHeure creneau) {
     creneaux.remove(creneau);
+    notifyListeners();
   }
 
   void add(DateHeure creneau) {
@@ -18,6 +19,7 @@ class CreneauxController {
       return;
     }
     creneaux.add(creneau);
+    notifyListeners();
   }
 }
 
@@ -128,18 +130,18 @@ class _WeekCalendarState extends State<WeekCalendar> {
               ),
           ],
         ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 300,
-          child: CheckboxListTile(
-              title: const Text("Afficher le samedi"),
-              value: showSamedi,
-              shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(4))),
-              onChanged: (b) => setState(() {
-                    showSamedi = b!;
-                  })),
-        ),
+        // const SizedBox(height: 10),
+        // SizedBox(
+        //   width: 300,
+        //   child: CheckboxListTile(
+        //       title: const Text("Afficher le samedi"),
+        //       value: showSamedi,
+        //       shape: const RoundedRectangleBorder(
+        //           borderRadius: BorderRadius.all(Radius.circular(4))),
+        //       onChanged: (b) => setState(() {
+        //             showSamedi = b!;
+        //           })),
+        // ),
       ],
     );
   }
@@ -247,6 +249,8 @@ class _AssistantCreneauxState extends State<AssistantCreneaux> {
 
 const _totalHeight = 400.0;
 const _dayWidth = 110.0;
+const _dayPaddingX = _dayWidth * 0.06;
+const _dayLeftPadding = _dayPaddingX * 0.42;
 
 class _Day extends StatefulWidget {
   final CreneauHoraireProvider horaires;
@@ -316,7 +320,7 @@ class _DayState extends State<_Day> {
     final topRatio =
         (dt.hour * 60 + dt.minute - _firstHour * 60) * _oneHourRatio / 60;
     return Positioned(
-      left: 0,
+      left: _dayLeftPadding,
       top: topRatio * _totalHeight,
       height: _oneHourHeight,
       child: _CreneauW(
@@ -351,12 +355,13 @@ class _DayState extends State<_Day> {
                   width: _dayWidth,
                   decoration: BoxDecoration(
                       border: Border.all(
-                          color: hoverTop != null ? Colors.blue : Colors.black),
-                      borderRadius: const BorderRadius.all(Radius.circular(8))),
+                          color:
+                              hoverTop != null ? Colors.blue : Colors.black54),
+                      borderRadius: const BorderRadius.all(Radius.circular(6))),
                   child: Stack(children: [
                     if (hoverTop != null)
                       Positioned(
-                          left: 0,
+                          left: _dayLeftPadding,
                           top: hoverTop,
                           height: _oneHourHeight,
                           child: _CreneauW(
@@ -394,7 +399,7 @@ class _CreneauW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _dayWidth,
+      width: _dayWidth - _dayPaddingX,
       height: height,
       decoration: BoxDecoration(
           color: asPlaceholder

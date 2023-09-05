@@ -14,11 +14,11 @@ String matieresToHTML(Colloscope col) {
     final rows = item.value.map((semaine) {
       final creneaux = semaine.item.map((e) {
         final time = col.semaines.dateFor(e.date.semaine, e.date.weekday);
-        return "<div class='chip'><b>${e.groupe?.name ?? ''}</b> ${formatDateTime(time, e.date)} - <i>${e.colleur}</i></div>";
+        return "<div class='chip'><i>${e.colleur}</i><br/><b>${e.groupe?.name ?? ''}</b> ${formatDateTime(time, e.date)}</div>";
       });
       return """
       <tr>
-        <td>Semaine ${semaine.semaine}</td>
+        <td>S ${semaine.semaine}</td>
         <td>${creneaux.join("")}</td>
       </tr>
       """;

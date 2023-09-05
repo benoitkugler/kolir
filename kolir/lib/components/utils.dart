@@ -138,7 +138,7 @@ class _SemaineRow extends StatelessWidget {
       padding: const EdgeInsets.all(4.0),
       child: Row(
         children: [
-          Text("Semaine ${semaine.toString().padLeft(2, '  ')} :"),
+          Text("S ${semaine.toString().padRight(2, '  ')} :"),
           const SizedBox(width: 10),
           Expanded(child: body)
         ],

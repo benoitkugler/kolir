@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:kolir/components/attribue_info.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
@@ -36,6 +37,13 @@ class VueGroupeW extends StatefulWidget {
       List<int> semaines, int periode) onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
+  // special variants for informatique
+  final List<AssignmentResult> Function(
+          InformatiqueParams params, int semaineStart, int semaineEnd)
+      onPreviewAttributeInformatique;
+  final Function(List<AssigmentSuccess>, int semaineStart, String colleur)
+      onAttributeInformatique;
+
   const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
       {required this.onAddGroupe,
@@ -46,6 +54,8 @@ class VueGroupeW extends StatefulWidget {
       required this.onClearMatiere,
       required this.onSetupAttribueAuto,
       required this.onAttributeAuto,
+      required this.onPreviewAttributeInformatique,
+      required this.onAttributeInformatique,
       super.key});
 
   @override
@@ -120,12 +130,14 @@ class _VueGroupeWState extends State<VueGroupeW> {
                 );
               }),
           secondChild: _Assistant(
-            widget.matieresList,
-            widget.groupes,
-            widget.creneaux,
-            widget.onSetupAttribueAuto,
-            widget.onAttributeAuto,
-          ),
+              widget.matieresList,
+              widget.horaires,
+              widget.groupes,
+              widget.creneaux,
+              widget.onSetupAttribueAuto,
+              widget.onAttributeAuto,
+              widget.onPreviewAttributeInformatique,
+              widget.onAttributeInformatique),
         ),
       ),
     );
@@ -194,6 +206,8 @@ class _GroupeW extends StatefulWidget {
   State<_GroupeW> createState() => _GroupeWState();
 }
 
+enum _GroupAction { updateHoraires, deleteGroup, clearCreaneaux }
+
 class _GroupeWState extends State<_GroupeW> {
   bool isInEdit = false;
 
@@ -234,29 +248,50 @@ class _GroupeWState extends State<_GroupeW> {
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
-              Tooltip(
-                message: "Supprimer définitivement le groupe",
-                child: IconButton(
-                  onPressed: widget.onRemove,
-                  icon: const Icon(Icons.delete),
+              PopupMenuButton<_GroupAction>(
+                  constraints: const BoxConstraints(minWidth: 180),
+                  tooltip: "Plus d'options...",
                   splashRadius: 20,
-                  color: Colors.red,
-                ),
-              ),
-              Tooltip(
-                richMessage: TextSpan(children: [
-                  const TextSpan(text: "Modifier les contraintes horaires\n"),
-                  TextSpan(
-                      text: resumeContraintes,
-                      style: const TextStyle(fontStyle: FontStyle.italic)),
-                ]),
-                child: IconButton(
-                  splashRadius: 20,
-                  onPressed: showEditContraintes,
-                  icon: const Icon(Icons.event_busy),
-                  color: Colors.lime,
-                ),
-              ),
+                  onSelected: (action) {
+                    switch (action) {
+                      case _GroupAction.updateHoraires:
+                        showEditContraintes();
+                        return;
+                      case _GroupAction.clearCreaneaux:
+                        widget.onClearCreneaux();
+                        return;
+                      case _GroupAction.deleteGroup:
+                        widget.onRemove();
+                        return;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: _GroupAction.updateHoraires,
+                          child: ListTile(
+                            title:
+                                const Text("Modifier les contraintes horaires"),
+                            subtitle: Text(resumeContraintes),
+                            leading: const Icon(Icons.event_busy,
+                                color: Colors.lime),
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: _GroupAction.clearCreaneaux,
+                          child: ListTile(
+                            title: Text(
+                                "Supprimer tous les créneaux affectés au groupe"),
+                            leading: Icon(Icons.clear, color: Colors.orange),
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: _GroupAction.deleteGroup,
+                          child: ListTile(
+                            leading: Icon(Icons.delete, color: Colors.red),
+                            title: Text("Supprimer définitivement le groupe"),
+                          ),
+                        ),
+                      ]),
               Tooltip(
                 message: isInEdit
                     ? "Terminer l'édition"
@@ -268,15 +303,6 @@ class _GroupeWState extends State<_GroupeW> {
                   }),
                   icon: Icon(isInEdit ? Icons.done : Icons.create_rounded),
                   color: isInEdit ? Colors.green : null,
-                ),
-              ),
-              Tooltip(
-                message: "Supprimer tous les créneaux affectés au groupe",
-                child: IconButton(
-                  splashRadius: 20,
-                  onPressed: widget.onClearCreneaux,
-                  icon: const Icon(Icons.clear),
-                  color: Colors.orange,
                 ),
               ),
               Text(
@@ -403,6 +429,7 @@ class _GroupStaticW extends StatelessWidget {
                 SemaineTo(
                     semaine.semaine,
                     Wrap(
+                        runSpacing: 2,
                         children: semaine.item
                             .map((c) => ColleW(
                                   c,
@@ -614,6 +641,7 @@ class _DiagnosticW extends StatelessWidget {
 // permet d'attribuer plusieurs créneaux d'un coup
 class _Assistant extends StatelessWidget {
   final MatiereProvider matieresList;
+  final CreneauHoraireProvider creneauxList;
   final List<Groupe> groupes;
   final Map<MatiereID, VueMatiere> creneaux;
 
@@ -621,22 +649,39 @@ class _Assistant extends StatelessWidget {
       List<int> semaines, int periode) onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
-  const _Assistant(this.matieresList, this.groupes, this.creneaux,
-      this.onSetupAttribueAuto, this.onAttributeAuto,
+  // special variants for informatique
+  final List<AssignmentResult> Function(
+          InformatiqueParams params, int semaineStart, int semaineEnd)
+      onPreviewAttributeInformatique;
+  final Function(List<AssigmentSuccess>, int semaineStart, String colleur)
+      onAttributeInformatique;
+
+  const _Assistant(
+      this.matieresList,
+      this.creneauxList,
+      this.groupes,
+      this.creneaux,
+      this.onSetupAttribueAuto,
+      this.onAttributeAuto,
+      this.onPreviewAttributeInformatique,
+      this.onAttributeInformatique,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
     return MatieresTabs(
         matieresList,
-        (mat) => _AssistantMatiere(
-              matieresList.values[mat],
-              groupes,
-              creneaux[mat] ?? [],
-              (groupes, semaines, periode) =>
-                  onSetupAttribueAuto(mat, groupes, semaines, periode),
-              onAttributeAuto,
-            ));
+        (mat) => mat == informatiqueID
+            ? AttribueInfo(creneauxList, onPreviewAttributeInformatique,
+                onAttributeInformatique)
+            : _AssistantMatiere(
+                matieresList.values[mat],
+                groupes,
+                creneaux[mat] ?? [],
+                (groupes, semaines, periode) =>
+                    onSetupAttribueAuto(mat, groupes, semaines, periode),
+                onAttributeAuto,
+              ));
   }
 }
 

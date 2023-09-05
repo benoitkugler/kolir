@@ -16,7 +16,7 @@ String creneauxToHTML(Colloscope col, List<Color> matieresColors) {
   final cells = entries.map((ls) => ls.value.map((l) {
         final row = l
             .map((colle) =>
-                "<div class='chip matiere-${colle.matiere.index}'>${colle.date.formatDateHeure()} - <i>${colle.colleur}</i> <b>${colle.salle}</b></div>")
+                "<div class='chip matiere-${colle.matiere.index}'>${colle.date.formatDateHeure()} - <i>${colle.colleur}</i><br/><b>${colle.salle}</b></div>")
             .join("\n");
         return "<div style='margin: 10px'>$row</div>";
       }).join("\n"));

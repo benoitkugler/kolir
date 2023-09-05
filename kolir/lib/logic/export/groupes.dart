@@ -16,11 +16,11 @@ String groupesToHTML(Colloscope col, List<Color> matieresColors) {
     final rows = item.value.map((semaine) {
       final creneaux = semaine.item.map((cr) {
         final time = col.semaines.dateFor(cr.date.semaine, cr.date.weekday);
-        return "<div class='chip matiere-${cr.matiere.index}'>${cr.matiere.format(dense: true)} ${formatDateTime(time, cr.date)} - <i>${cr.colleur}</i></div>";
+        return "<div class='chip matiere-${cr.matiere.index}'>${cr.matiere.format(dense: true)}  - <i>${cr.colleur}</i><br/>${formatDateTime(time, cr.date)}</div>";
       });
       return """
       <tr>
-        <td>Semaine ${semaine.semaine}</td>
+        <td>S ${semaine.semaine}</td>
         <td>${creneaux.join("")}</td>
       </tr>
       """;

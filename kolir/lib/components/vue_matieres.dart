@@ -202,16 +202,20 @@ class _MatiereW extends StatelessWidget {
                             semaine.semaine,
                             Row(
                               children: [
-                                Wrap(
-                                  children: semaine.item
-                                      .map((e) => ColleW(e.toColle(matiere),
-                                          showMatiere: false,
-                                          onDelete: (_) => onDelete(e.index),
-                                          onEditColleur: (colleur) =>
-                                              onEditColleur(e.index, colleur),
-                                          onEditSalle: (salle) =>
-                                              onEditSalle(e.index, salle)))
-                                      .toList(),
+                                Expanded(
+                                  flex: 6,
+                                  child: Wrap(
+                                    runSpacing: 2,
+                                    children: semaine.item
+                                        .map((e) => ColleW(e.toColle(matiere),
+                                            showMatiere: false,
+                                            onDelete: (_) => onDelete(e.index),
+                                            onEditColleur: (colleur) =>
+                                                onEditColleur(e.index, colleur),
+                                            onEditSalle: (salle) =>
+                                                onEditSalle(e.index, salle)))
+                                        .toList(),
+                                  ),
                                 ),
                                 const Spacer(),
                                 IconButton(
