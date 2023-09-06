@@ -79,6 +79,7 @@ const defautHoraires = CreneauHoraireProvider([
   CreneauHoraireData(15, 30),
   CreneauHoraireData(16, 30),
   CreneauHoraireData(17, 30),
+  CreneauHoraireData(18, 30),
 ]);
 
 // ----------------------------------------------------------------------
