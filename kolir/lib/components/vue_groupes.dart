@@ -210,6 +210,7 @@ enum _GroupAction { updateHoraires, deleteGroup, clearCreaneaux }
 
 class _GroupeWState extends State<_GroupeW> {
   bool isInEdit = false;
+  MatiereID? selected;
 
   void showEditContraintes() async {
     final allCreneaux = widget.creneaux.values
@@ -238,6 +239,13 @@ class _GroupeWState extends State<_GroupeW> {
 
   int get nbMaxCollesParSemaine =>
       widget.semaines.map((s) => s.item.length).fold(0, max);
+
+  void _selectMatiere(MatiereID matiere) {
+    final newMat = (selected == matiere) ? null : matiere;
+    setState(() {
+      selected = newMat;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -316,8 +324,12 @@ class _GroupeWState extends State<_GroupeW> {
                   crossFadeState: isInEdit
                       ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
-                  firstChild: _GroupStaticW(widget.semaines,
-                      widget.onToogleCreneau, widget.onClearMatiere),
+                  firstChild: _GroupStaticW(
+                      widget.semaines,
+                      selected,
+                      widget.onToogleCreneau,
+                      widget.onClearMatiere,
+                      _selectMatiere),
                   secondChild: _GroupEditW(
                     widget.matieresList,
                     widget.groupe.id,
@@ -393,10 +405,14 @@ class __EditContraintesState extends State<_EditContraintes> {
 
 class _GroupStaticW extends StatelessWidget {
   final VueGroupe semaines;
+  final MatiereID? selected;
+
   final void Function(MatiereID matiere, int creneauIndex) onDelete;
   final void Function(MatiereID matiere) onClearMatiere;
+  final void Function(MatiereID matiere) onSelectMatiere;
 
-  const _GroupStaticW(this.semaines, this.onDelete, this.onClearMatiere,
+  const _GroupStaticW(this.semaines, this.selected, this.onDelete,
+      this.onClearMatiere, this.onSelectMatiere,
       {super.key});
 
   void confirmeClearMatiere(Matiere matiere, BuildContext context) async {
@@ -431,12 +447,18 @@ class _GroupStaticW extends StatelessWidget {
                     Wrap(
                         runSpacing: 2,
                         children: semaine.item
-                            .map((c) => ColleW(
-                                  c,
-                                  onDelete: (all) => all
-                                      ? confirmeClearMatiere(c.matiere, context)
-                                      : onDelete(
-                                          c.matiere.index, c.creneauxIndex),
+                            .map((c) => GestureDetector(
+                                  onTap: () => onSelectMatiere(c.matiere.index),
+                                  child: ColleW(
+                                    c,
+                                    state: ChipState.fromMatiere(
+                                        selected, c.matiere.index),
+                                    onDelete: (all) => all
+                                        ? confirmeClearMatiere(
+                                            c.matiere, context)
+                                        : onDelete(
+                                            c.matiere.index, c.creneauxIndex),
+                                  ),
                                 ))
                             .toList())))
             .toList(),

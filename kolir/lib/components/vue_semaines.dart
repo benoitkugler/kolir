@@ -164,9 +164,10 @@ class _WeekdayW extends StatelessWidget {
               .map((creneauxParHeure) => Row(
                   children: creneauxParHeure
                       .map((creneau) => _GroupColle(
-                          creneau,
-                          creneau.groupe != null &&
-                              creneau.groupe?.id == currentGroup))
+                            creneau,
+                            ChipState.fromGroupe(
+                                currentGroup, creneau.groupe?.id),
+                          ))
                       .toList()))
               .toList()
         ]),
@@ -188,9 +189,9 @@ class _NotifPermute extends Notification {
 
 class _GroupColle extends StatelessWidget {
   final PopulatedCreneau creneau;
-  final bool isHighlighted;
+  final ChipState state;
 
-  const _GroupColle(this.creneau, this.isHighlighted, {super.key});
+  const _GroupColle(this.creneau, this.state, {super.key});
 
   Widget _content(bool isHovered) {
     final group = creneau.groupe?.name ?? "?";
@@ -198,12 +199,15 @@ class _GroupColle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-          border: Border.all(color: isHovered ? Colors.black : matiere.color),
+          border: Border.all(
+              color: isHovered
+                  ? Colors.black
+                  : matiere.color.withOpacity(state.opacity + 0.2)),
           borderRadius: const BorderRadius.all(Radius.circular(8)),
-          color: matiere.color.withOpacity(isHighlighted ? 0.6 : 0.5)),
+          color: matiere.color.withOpacity(state.opacity)),
       child: Text(
         "${creneau.date.formatHeure()}  $group ",
-        style: TextStyle(fontWeight: isHighlighted ? FontWeight.bold : null),
+        style: TextStyle(color: state.color),
       ),
     );
   }
@@ -217,7 +221,9 @@ class _GroupColle extends StatelessWidget {
       child: DragTarget<CreneauID>(
         builder: (context, candidateData, rejectedData) => GestureDetector(
           onTap: creneau.groupe != null
-              ? () => _NotifHover(isHighlighted ? null : creneau.groupe!.id)
+              ? () => _NotifHover(state == ChipState.highlighted
+                      ? null
+                      : creneau.groupe!.id)
                   .dispatch(context)
               : null,
           child: Tooltip(

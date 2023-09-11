@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
+import 'package:kolir/logic/utils.dart';
 
 enum ModeView { matieres, groupes, semaines }
 
@@ -147,9 +148,48 @@ class _SemaineRow extends StatelessWidget {
   }
 }
 
+enum ChipState {
+  regular,
+  highlighted,
+  blurred;
+
+  factory ChipState.fromGroupe(GroupeID? selected, GroupeID? groupe) {
+    if (selected == null) return ChipState.regular;
+    return groupe == selected ? ChipState.highlighted : ChipState.blurred;
+  }
+
+  factory ChipState.fromMatiere(MatiereID? selected, MatiereID matiere) {
+    if (selected == null) return ChipState.regular;
+    return matiere == selected ? ChipState.highlighted : ChipState.blurred;
+  }
+
+  double get opacity {
+    switch (this) {
+      case ChipState.regular:
+        return 0.5;
+      case ChipState.highlighted:
+        return 0.7;
+      case ChipState.blurred:
+        return 0.2;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case ChipState.regular:
+        return Colors.black87;
+      case ChipState.highlighted:
+        return Colors.black;
+      case ChipState.blurred:
+        return Colors.black26;
+    }
+  }
+}
+
 class ColleW extends StatefulWidget {
   final Colle colle;
   final bool showMatiere;
+  final ChipState state;
 
   final void Function(bool allMatiere)? onDelete;
   final void Function(String)? onEditColleur;
@@ -157,6 +197,7 @@ class ColleW extends StatefulWidget {
 
   const ColleW(this.colle,
       {this.showMatiere = true,
+      this.state = ChipState.regular,
       this.onDelete,
       this.onEditColleur,
       this.onEditSalle,
@@ -285,8 +326,11 @@ class _ColleWState extends State<ColleW> {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
-          color: widget.colle.matiere.color.withOpacity(0.3),
-          border: Border.all(color: widget.colle.matiere.color),
+          color: widget.colle.matiere.color
+              .withOpacity(widget.state.opacity - 0.1),
+          border: Border.all(
+              color: widget.colle.matiere.color
+                  .withOpacity(widget.state.opacity + 0.2)),
           borderRadius: const BorderRadius.all(
             Radius.circular(4),
           ),
@@ -295,11 +339,12 @@ class _ColleWState extends State<ColleW> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(text),
+            Text(text, style: TextStyle(color: widget.state.color)),
             Padding(
               padding: const EdgeInsets.only(left: 6.0),
               child: Text(widget.colle.colleur,
-                  style: const TextStyle(fontStyle: FontStyle.italic)),
+                  style: TextStyle(
+                      color: widget.state.color, fontStyle: FontStyle.italic)),
             ),
             trailing,
           ],
