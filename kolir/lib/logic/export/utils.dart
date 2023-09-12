@@ -20,7 +20,9 @@ const _template = """
       }
 
       @page {
-        padding: 5px 10px;
+        padding: 0px 10px;
+        margin-left: 15px;
+        margin-right: 5px;
       }
 
       table {

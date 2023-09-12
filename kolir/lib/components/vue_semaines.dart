@@ -207,7 +207,10 @@ class _GroupColle extends StatelessWidget {
           color: matiere.color.withOpacity(state.opacity)),
       child: Text(
         "${creneau.date.formatHeure()}  $group ",
-        style: TextStyle(color: state.color),
+        style: TextStyle(
+            color: state.color,
+            fontWeight:
+                state == ChipState.highlighted ? FontWeight.bold : null),
       ),
     );
   }
