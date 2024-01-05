@@ -570,6 +570,18 @@ class Colloscope {
     }
   }
 
+  /// [shiftSemaines] décale le numéro des semaines de colle de [shift].
+  /// Le champ [semaines] est remis à zéro.
+  void shiftSemaines(int shift) {
+    for (var matiere in _matieres.values) {
+      for (var i = 0; i < matiere.length; i++) {
+        final cr = matiere[i];
+        matiere[i] = cr._copyWithWeek(cr.date.semaine + shift);
+      }
+    }
+    semaines = const SemaineProvider({});
+  }
+
   // Colles d'informatique
 
   AssignmentResult _tryAssign(List<DateHeure> creneaux,

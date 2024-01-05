@@ -198,6 +198,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void shiftSemaines(int shift) {
+    setState(() {
+      currentColloscope.shiftSemaines(shift);
+    });
+  }
+
   void attributeInformatique(
       List<AssigmentSuccess> assignments, int semaineStart, String colleur) {
     setState(() {
@@ -270,6 +276,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onEditColleur: editCreneauColleur,
           onEditSalle: editCreneauxSalle,
           onRepeteMotifCourant: repeteMotifCourant,
+          onShiftSemaines: shiftSemaines,
         );
     }
   }

@@ -23,6 +23,7 @@ class VueMatiereW extends StatelessWidget {
       onEditSalle;
   final void Function(MatiereID mat, int nombre, int? periode)
       onRepeteMotifCourant;
+  final void Function(int shift) onShiftSemaines;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
       {required this.onAdd,
@@ -31,13 +32,24 @@ class VueMatiereW extends StatelessWidget {
       required this.onEditColleur,
       required this.onEditSalle,
       required this.onRepeteMotifCourant,
+      required this.onShiftSemaines,
       super.key});
 
   @override
   Widget build(BuildContext context) {
     return VueSkeleton(
       mode: ModeView.matieres,
-      actions: const [],
+      actions: [
+        ElevatedButton(
+            onPressed: () async {
+              final shift = await showDialog<int>(
+                  context: context,
+                  builder: (context) => const _ShiftSemaineDialog());
+              if (shift == null) return;
+              onShiftSemaines(shift);
+            },
+            child: const Text("Décaler les semaines..."))
+      ],
       child: Expanded(
           child: ListView(
         key: const PageStorageKey("list_matiere"),
@@ -58,6 +70,62 @@ class VueMatiereW extends StatelessWidget {
       )),
     );
   }
+}
+
+class _ShiftSemaineDialog extends StatefulWidget {
+  const _ShiftSemaineDialog({super.key});
+
+  @override
+  State<_ShiftSemaineDialog> createState() => __ShiftSemaineDialogState();
+}
+
+class __ShiftSemaineDialogState extends State<_ShiftSemaineDialog> {
+  TextEditingController fromC = TextEditingController();
+  TextEditingController toC = TextEditingController();
+
+  @override
+  void initState() {
+    fromC.addListener(() => setState(() => {}));
+    toC.addListener(() => setState(() => {}));
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Décaler les semaines"),
+      content: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: fromC,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(labelText: "de"),
+            ),
+          ),
+          const SizedBox(width: 50),
+          Expanded(
+            child: TextField(
+              controller: toC,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(labelText: "à"),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+            onPressed:
+                isValid ? () => Navigator.of(context).pop(to! - from!) : null,
+            child: const Text("Décaler"))
+      ],
+    );
+  }
+
+  int? get from => int.tryParse(fromC.text);
+  int? get to => int.tryParse(toC.text);
+
+  bool get isValid => from != null && to != null && from != to;
 }
 
 class _DuplicateDialog extends StatefulWidget {
