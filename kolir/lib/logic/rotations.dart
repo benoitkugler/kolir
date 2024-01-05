@@ -1,9 +1,10 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
 import 'package:kolir/logic/utils.dart';
 
-/// [setupRotations] calcule les répartitions permettant d'attribuer les groupes donnés aux les créneaux
+/// [setupRotations] calcule les répartitions permettant d'attribuer les groupes donnés aux créneaux
 /// donnés, en respectant les contraintes des groupes.
 /// Les contraintes prises en comptes sont les contraintes hebdomadaires et [alreadyAttributed].
 /// De plus, pour chaque semaine, un groupe apparait au plus une fois.
@@ -146,7 +147,8 @@ class _RotationBuilder {
 // après sélection des contraintes
 typedef _CandidatesPerWeek = List<List<Permutation>>;
 
-// représente l'attribution des créneaux de la semaine
+/// [Permutation] représente l'attribution des créneaux de la semaine :
+/// list[creneau] = group
 typedef Permutation = List<GroupeID>;
 
 class Maybe<T> {
@@ -182,6 +184,7 @@ int numberOfCombinaisons<T>(List<List<T>> sources) {
       .reduce((value, element) => value * element);
 }
 
+@visibleForTesting
 Iterable<List<T>> generateCombinaisons<T>(List<List<T>> sources) sync* {
   if (sources.isEmpty || sources.any((l) => l.isEmpty)) {
     yield [];
@@ -217,6 +220,35 @@ int hintPeriode(
   return periode.ceil();
 }
 
+class _ColleurGroupe {
+  final String colleur;
+  final GroupeID groupe;
+  const _ColleurGroupe(this.colleur, this.groupe);
+
+  @override
+  int get hashCode => colleur.hashCode + groupe.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return (other is _ColleurGroupe) &&
+        colleur == other.colleur &&
+        groupe == other.groupe;
+  }
+}
+
+// nombre de passages pour chaque groupe chaque colleur
+typedef _RepartitionColleurs = Map<_ColleurGroupe, double>;
+
+double _repartitionDistance(_RepartitionColleurs v1, _RepartitionColleurs v2) {
+  var out = 0.0;
+  for (var key in v1.keys) {
+    final val1 = v1[key] ?? 0;
+    final val2 = v2[key] ?? 0;
+    out += (val1 - val2).abs();
+  }
+  return out / v1.length;
+}
+
 class RotationSelector {
   final MatiereID _matiere;
   final List<SemaineTo<List<PopulatedCreneau>>> _creneauxParSemaine;
@@ -225,13 +257,36 @@ class RotationSelector {
 
   final Map<GroupeID, int> bufferEquilibrium;
   final Map<GroupeID, List<int>> bufferPeriodeByGroupe = {};
-
-  int get essais => numberOfCombinaisons(_candidates);
+  final _RepartitionColleurs bufferRepartitionColleur = {};
 
   RotationSelector(this._matiere, this._creneauxParSemaine, this._candidates,
       List<Groupe> groupes, this._periode)
       : bufferEquilibrium =
             Map.fromEntries(groupes.map((e) => MapEntry(e.id, 0)));
+
+  int get essais => numberOfCombinaisons(_candidates);
+
+  _RepartitionColleurs get _bestRepartitionColleurs {
+    // nombre de créneaux total pour chaque colleur
+    final byColleur = <String, int>{};
+    for (var semaine in _creneauxParSemaine) {
+      for (var creneau in semaine.item) {
+        byColleur[creneau.colleur] = (byColleur[creneau.colleur] ?? 0) + 1;
+      }
+    }
+    final nbGroupes = bufferEquilibrium.keys.length;
+    _RepartitionColleurs out = {};
+    for (var item in byColleur.entries) {
+      final colleur = item.key;
+      final nbCreneaux = item.value;
+      final nbPassage = nbCreneaux / nbGroupes;
+      for (var groupeID in bufferEquilibrium.keys) {
+        out[_ColleurGroupe(colleur, groupeID)] = nbPassage;
+      }
+    }
+
+    return out;
+  }
 
   bool _hasEquilibrium(List<Permutation> value) {
     bufferEquilibrium.updateAll((key, value) => 0);
@@ -242,6 +297,26 @@ class RotationSelector {
     }
     final first = bufferEquilibrium.values.first;
     return bufferEquilibrium.values.every((size) => size == first);
+  }
+
+  // verifie si les groupes sont bien répartis sur tous les colleurs,
+  // renoyant une distance
+  double _repartitionColleur(List<Permutation> value) {
+    bufferRepartitionColleur.clear();
+    for (var i = 0; i < value.length; i++) {
+      final perm = value[i];
+      final semaine = _creneauxParSemaine[i].item;
+      for (var creneauIndex = 0; creneauIndex < perm.length; creneauIndex++) {
+        final groupeID = perm[creneauIndex];
+        final colleur = semaine[creneauIndex].colleur;
+        bufferRepartitionColleur[_ColleurGroupe(colleur, groupeID)] =
+            (bufferRepartitionColleur[_ColleurGroupe(colleur, groupeID)] ?? 0) +
+                1;
+      }
+    }
+
+    return _repartitionDistance(
+        _bestRepartitionColleurs, bufferRepartitionColleur);
   }
 
   // verifie si, pour chaque groupes, les colles sont séparés
@@ -293,25 +368,43 @@ class RotationSelector {
   /// [select] renvoie, pour chaque semaine demandée, les groupes affectés
   /// aux créneaux de la semaine.
   /// Dans le pire des cas, le temps de calcul est proportionnel à [essais].
-  /// Cette fonction devrait être appelée dans un thread s
+  /// Cette fonction devrait être appelée dans un thread séparé
   SelectedRotation select() {
-    final iter = generateCombinaisons(_candidates);
+    Iterable<List<Permutation>> iter = generateCombinaisons(_candidates);
     // try every permutation of the candidate and select the best
     // in case nothing works, we give priority to equilibrium over periode
     List<Permutation>? best;
     int bestPeriodeScore = 0; // higher is better
+    List<MapEntry<List<Permutation>, double>> withRespectPeriode = [];
     for (var res in iter) {
       if (_hasEquilibrium(res)) {
+        final colleurScore = _repartitionColleur(res);
         final periodeScore = _respectPeriode(res);
         if (periodeScore == null) {
-          return SelectedRotation(
-              _matiere, _creneauxParSemaine, res); // great !
+          if (colleurScore == 0) {
+            // great !
+            return SelectedRotation(_matiere, _creneauxParSemaine, res);
+          }
+          // store and choose the best repartition later
+          withRespectPeriode.add(MapEntry(res, colleurScore));
+          continue;
         } else if (periodeScore > bestPeriodeScore || best == null) {
           // garde le meilleur score
           best = res;
           bestPeriodeScore = periodeScore;
         }
       }
+    }
+
+    if (withRespectPeriode.isNotEmpty) {
+      // select the lower colleur distance
+      var best = withRespectPeriode.first;
+      for (var item in withRespectPeriode) {
+        if (item.value < best.value) {
+          best = item;
+        }
+      }
+      return SelectedRotation(_matiere, _creneauxParSemaine, best.key);
     }
 
     // hope for equilbirum
