@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Kolir"
-#define MyAppVersion "1.0"
+#define MyAppVersion "1.1"
 #define MyAppPublisher "Benoit Kugler"
 #define MyAppURL "https://benoitkugler.github.io/kolir"
 #define MyAppExeName "Kolir.exe"
