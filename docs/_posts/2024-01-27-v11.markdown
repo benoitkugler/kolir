@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Version bêta"
+title:  "Mise à jour v1.1"
 date:   2024-01-27 09:48:02 +0200
 categories: kolir update
 ---
