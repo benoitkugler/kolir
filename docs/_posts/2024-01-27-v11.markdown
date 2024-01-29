@@ -1,12 +1,12 @@
 ---
 layout: post
-title:  "Mise à jour v1.1"
-date:   2024-01-27 09:48:02 +0200
+title: "Mise à jour v1.1"
+date: 2024-01-27 09:48:02 +0200
 categories: kolir update
 ---
 
 ## Nouvelle version
 
-La version 1.1 est disponible pour Windows [ici]({{ site.url }}/kolir/bin/Kolir-v11.exe).
+La version 1.1 est disponible pour [Windows]({{ site.url }}/kolir/bin/Kolir-v11.exe) et pour [Mac]({{ site.url }}/kolir/bin/Kolir-v11.dmg).
 
-Elle apporte plusieurs améliorations comme l'ajout des dates réelles sur les créneaux, la prise en charge de groupe de TDs et le classement par colleur dans le fichier exporté.  
+Elle apporte plusieurs améliorations comme l'ajout des dates réelles sur les créneaux, la prise en charge de groupe de TDs et le classement par colleur dans le fichier exporté.
