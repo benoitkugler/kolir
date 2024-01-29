@@ -1,0 +1,36 @@
+{
+    "title": "Kolir",
+    "icon": "icon.icns",
+    "window": {
+        "size": {
+            "width": 500,
+            "height": 400
+        }
+    },
+    "contents": [
+        {
+            "x": 300,
+            "y": 200,
+            "type": "link",
+            "path": "/Applications"
+        },
+        {
+            "x": 100,
+            "y": 200,
+            "type": "file",
+            "path": "../kolir.app"
+        },
+        {
+            "type": "position",
+            "path": ".background",
+            "x": 600,
+            "y": 600
+        },
+        {
+            "type": "position",
+            "path": ".VolumeIcon.icns",
+            "x": 600,
+            "y": 600
+        }
+    ]
+}
