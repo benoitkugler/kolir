@@ -354,11 +354,11 @@ class _ColleWState extends State<ColleW> {
   }
 }
 
-/// [MatieresTabs] is a tab view, indexed by [MatiereID]
+/// [MatieresTabs] is a tab view, indexed by [Matiere]
 class MatieresTabs extends StatefulWidget {
   final MatiereProvider matieres;
 
-  final Widget Function(MatiereID mat) builder;
+  final Widget Function(Matiere mat) builder;
 
   const MatieresTabs(this.matieres, this.builder, {super.key});
 
@@ -372,11 +372,11 @@ class _MatieresTabsState extends State<MatieresTabs>
 
   @override
   void initState() {
-    ct = TabController(length: widget.matieres.values.length, vsync: this);
+    ct = TabController(length: widget.matieres.list.length, vsync: this);
     super.initState();
   }
 
-  MatiereID get mat => widget.matieres.values[ct.index].index;
+  Matiere get mat => widget.matieres.list[ct.index];
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +396,7 @@ class _MatieresTabsState extends State<MatieresTabs>
                   labelColor: Colors.black,
                   splashBorderRadius:
                       const BorderRadius.all(Radius.circular(4)),
-                  tabs: widget.matieres.values
+                  tabs: widget.matieres.list
                       .map((e) => Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
                             child: Text(e.format()),

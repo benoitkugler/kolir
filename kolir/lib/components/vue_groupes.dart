@@ -39,10 +39,12 @@ class VueGroupeW extends StatefulWidget {
 
   // special variants for informatique
   final List<AssignmentResult> Function(
-          InformatiqueParams params, int semaineStart, int semaineEnd)
-      onPreviewAttributeInformatique;
-  final Function(List<AssigmentSuccess>, int semaineStart, String colleur)
-      onAttributeInformatique;
+      MatiereID matiere,
+      VariableCreneauxParams params,
+      int semaineStart,
+      int semaineEnd) onPreviewAttributeVariables;
+  final Function(MatiereID matiere, List<AssigmentSuccess>, int semaineStart,
+      String colleur) onAttributeVariables;
 
   const VueGroupeW(this.horaires, this.matieresList, this.groupes, this.colles,
       this.diagnostics, this.creneaux,
@@ -54,8 +56,8 @@ class VueGroupeW extends StatefulWidget {
       required this.onClearMatiere,
       required this.onSetupAttribueAuto,
       required this.onAttributeAuto,
-      required this.onPreviewAttributeInformatique,
-      required this.onAttributeInformatique,
+      required this.onPreviewAttributeVariables,
+      required this.onAttributeVariables,
       super.key});
 
   @override
@@ -136,8 +138,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
               widget.creneaux,
               widget.onSetupAttribueAuto,
               widget.onAttributeAuto,
-              widget.onPreviewAttributeInformatique,
-              widget.onAttributeInformatique),
+              widget.onPreviewAttributeVariables,
+              widget.onAttributeVariables),
         ),
       ),
     );
@@ -432,7 +434,7 @@ class _GroupStaticW extends StatelessWidget {
               ],
             ));
     if (ok != null) {
-      onClearMatiere(matiere.index);
+      onClearMatiere(matiere.id);
     }
   }
 
@@ -448,16 +450,16 @@ class _GroupStaticW extends StatelessWidget {
                         runSpacing: 2,
                         children: semaine.item
                             .map((c) => GestureDetector(
-                                  onTap: () => onSelectMatiere(c.matiere.index),
+                                  onTap: () => onSelectMatiere(c.matiere.id),
                                   child: ColleW(
                                     c,
                                     state: ChipState.fromMatiere(
-                                        selected, c.matiere.index),
+                                        selected, c.matiere.id),
                                     onDelete: (all) => all
                                         ? confirmeClearMatiere(
                                             c.matiere, context)
                                         : onDelete(
-                                            c.matiere.index, c.creneauxIndex),
+                                            c.matiere.id, c.creneauxIndex),
                                   ),
                                 ))
                             .toList())))
@@ -481,12 +483,14 @@ class _GroupEditW extends StatelessWidget {
   Widget build(BuildContext context) {
     return MatieresTabs(
       matieresList,
-      (mat) => _GroupEditMatiere(
-        groupe,
-        matieresList.values[mat],
-        creneaux[mat] ?? [],
-        (creneauIndex) => onToogleCreneau(mat, creneauIndex),
-      ),
+      (matiere) {
+        return _GroupEditMatiere(
+          groupe,
+          matiere,
+          creneaux[matiere.id] ?? [],
+          (creneauIndex) => onToogleCreneau(matiere.id, creneauIndex),
+        );
+      },
     );
   }
 }
@@ -671,12 +675,14 @@ class _Assistant extends StatelessWidget {
       List<int> semaines, int periode) onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
-  // special variants for informatique
+  // special variants for variable creneaux like informatique
   final List<AssignmentResult> Function(
-          InformatiqueParams params, int semaineStart, int semaineEnd)
-      onPreviewAttributeInformatique;
-  final Function(List<AssigmentSuccess>, int semaineStart, String colleur)
-      onAttributeInformatique;
+      MatiereID matiere,
+      VariableCreneauxParams params,
+      int semaineStart,
+      int semaineEnd) onPreviewAttributeVariables;
+  final Function(MatiereID matiere, List<AssigmentSuccess>, int semaineStart,
+      String colleur) onAttributeVariables;
 
   const _Assistant(
       this.matieresList,
@@ -685,25 +691,25 @@ class _Assistant extends StatelessWidget {
       this.creneaux,
       this.onSetupAttribueAuto,
       this.onAttributeAuto,
-      this.onPreviewAttributeInformatique,
-      this.onAttributeInformatique,
+      this.onPreviewAttributeVariables,
+      this.onAttributeVariables,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MatieresTabs(
-        matieresList,
-        (mat) => mat == informatiqueID
-            ? AttribueInfo(creneauxList, onPreviewAttributeInformatique,
-                onAttributeInformatique)
-            : _AssistantMatiere(
-                matieresList.values[mat],
-                groupes,
-                creneaux[mat] ?? [],
-                (groupes, semaines, periode) =>
-                    onSetupAttribueAuto(mat, groupes, semaines, periode),
-                onAttributeAuto,
-              ));
+    return MatieresTabs(matieresList, (matiere) {
+      return matiere.hasInitialCreneaux
+          ? _AssistantMatiere(
+              matiere,
+              groupes,
+              creneaux[matiere.id] ?? [],
+              (groupes, semaines, periode) =>
+                  onSetupAttribueAuto(matiere.id, groupes, semaines, periode),
+              onAttributeAuto,
+            )
+          : AttribueVariableCreneaux(matiere, creneauxList,
+              onPreviewAttributeVariables, onAttributeVariables);
+    });
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
@@ -12,6 +13,10 @@ class VueMatiereW extends StatelessWidget {
   final CreneauHoraireProvider horaires;
 
   final Map<MatiereID, VueMatiere> byMatieres;
+
+  final void Function() onCreateMatiere;
+  final void Function(Matiere matiere) onUpdateMatiere;
+  final void Function(Matiere matiere) onDeleteMatiere;
 
   final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines,
       String colleur) onAdd;
@@ -26,7 +31,10 @@ class VueMatiereW extends StatelessWidget {
   final void Function(int shift) onShiftSemaines;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
-      {required this.onAdd,
+      {required this.onCreateMatiere,
+      required this.onUpdateMatiere,
+      required this.onDeleteMatiere,
+      required this.onAdd,
       required this.onDeleteCreneau,
       required this.onDeleteSemaine,
       required this.onEditColleur,
@@ -40,6 +48,12 @@ class VueMatiereW extends StatelessWidget {
     return VueSkeleton(
       mode: ModeView.matieres,
       actions: [
+        ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: onCreateMatiere,
+            icon: const Icon(Icons.add),
+            label: const Text("Ajouter une matière")),
+        const SizedBox(width: 10),
         ElevatedButton(
             onPressed: () async {
               final shift = await showDialog<int>(
@@ -53,18 +67,20 @@ class VueMatiereW extends StatelessWidget {
       child: Expanded(
           child: ListView(
         key: const PageStorageKey("list_matiere"),
-        children: matieresList.values
+        children: matieresList.list
             .map((mat) => _MatiereW(
                   horaires,
                   mat,
-                  byMatieres[mat.index] ?? [],
-                  (h, s, c) => onAdd(mat.index, h, s, c),
-                  (index) => onDeleteCreneau(mat.index, index),
-                  (index) => onDeleteSemaine(mat.index, index),
-                  (index, colleur) => onEditColleur(mat.index, index, colleur),
-                  (index, salle) => onEditSalle(mat.index, index, salle),
+                  byMatieres[mat.id] ?? [],
+                  () => onDeleteMatiere(mat),
+                  onUpdateMatiere,
+                  (h, s, c) => onAdd(mat.id, h, s, c),
+                  (index) => onDeleteCreneau(mat.id, index),
+                  (index) => onDeleteSemaine(mat.id, index),
+                  (index, colleur) => onEditColleur(mat.id, index, colleur),
+                  (index, salle) => onEditSalle(mat.id, index, salle),
                   (nombre, periode) =>
-                      onRepeteMotifCourant(mat.index, nombre, periode),
+                      onRepeteMotifCourant(mat.id, nombre, periode),
                 ))
             .toList(),
       )),
@@ -197,9 +213,11 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
 
+  final void Function() onDelete;
+  final void Function(Matiere) onUpdate;
   final void Function(List<DateHeure> hours, List<int> semaines, String colleur)
       onAdd;
-  final void Function(int creneauIndex) onDelete;
+  final void Function(int creneauIndex) onDeleteCreneau;
   final void Function(int semaine) onDeleteSemaine;
   final void Function(int creneauIndex, String colleur) onEditColleur;
   final void Function(int creneauIndex, String salle) onEditSalle;
@@ -210,8 +228,10 @@ class _MatiereW extends StatelessWidget {
       this.horaires,
       this.matiere,
       this.semaines,
-      this.onAdd,
       this.onDelete,
+      this.onUpdate,
+      this.onAdd,
+      this.onDeleteCreneau,
       this.onDeleteSemaine,
       this.onEditColleur,
       this.onEditSalle,
@@ -248,6 +268,14 @@ class _MatiereW extends StatelessWidget {
     }
   }
 
+  void _showEditMatiere(BuildContext context) async {
+    final updated = await showDialog<Matiere>(
+      context: context,
+      builder: (context) => _MatiereDetailsDialog(matiere),
+    );
+    if (updated != null) onUpdate(updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -260,8 +288,31 @@ class _MatiereW extends StatelessWidget {
             children: [
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.1,
-                child: Text(matiere.format(),
-                    style: const TextStyle(fontSize: 18)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(matiere.format(),
+                        style: const TextStyle(fontSize: 18)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          splashRadius: 18,
+                          tooltip: "Modifier la matière",
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _showEditMatiere(context),
+                        ),
+                        IconButton(
+                          splashRadius: 18,
+                          color: Colors.red,
+                          tooltip: "Supprimer la matière",
+                          icon: const Icon(Icons.delete),
+                          onPressed: onDelete,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: SemaineList(
@@ -277,7 +328,8 @@ class _MatiereW extends StatelessWidget {
                                     children: semaine.item
                                         .map((e) => ColleW(e.toColle(matiere),
                                             showMatiere: false,
-                                            onDelete: (_) => onDelete(e.index),
+                                            onDelete: (_) =>
+                                                onDeleteCreneau(e.index),
                                             onEditColleur: (colleur) =>
                                                 onEditColleur(e.index, colleur),
                                             onEditSalle: (salle) =>
@@ -304,7 +356,9 @@ class _MatiereW extends StatelessWidget {
               Column(
                 children: [
                   ElevatedButton(
-                      onPressed: () => showAddCreneaux(context),
+                      onPressed: matiere.hasInitialCreneaux
+                          ? () => showAddCreneaux(context)
+                          : null,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green),
                       child: const Text("Ajouter des créneaux")),
@@ -312,7 +366,9 @@ class _MatiereW extends StatelessWidget {
                   Tooltip(
                       message: "Répéter la structure courante n fois",
                       child: ElevatedButton(
-                          onPressed: () => showDuplicate(context),
+                          onPressed: matiere.hasInitialCreneaux
+                              ? () => showDuplicate(context)
+                              : null,
                           child: const Text("Répéter...")))
                 ],
               )
@@ -320,6 +376,108 @@ class _MatiereW extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MatiereDetailsDialog extends StatefulWidget {
+  final Matiere matiere;
+  const _MatiereDetailsDialog(this.matiere, {super.key});
+
+  @override
+  State<_MatiereDetailsDialog> createState() => _MatiereDetailsDialogState();
+}
+
+class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
+  final nameCt = TextEditingController();
+  final shortNameCt = TextEditingController();
+  final dureeCt = TextEditingController();
+  Color color = Colors.blue;
+  bool hasInitialCreneaux = true;
+
+  @override
+  initState() {
+    nameCt.text = widget.matiere.name;
+    shortNameCt.text = widget.matiere.shortName;
+    dureeCt.text = widget.matiere.colleDuree.toString();
+    color = widget.matiere.color;
+    hasInitialCreneaux = widget.matiere.hasInitialCreneaux;
+    super.initState();
+  }
+
+  _showColorPicker() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text("Modifier la couleur"),
+              content: MaterialPicker(
+                  pickerColor: color,
+                  onColorChanged: (c) => setState(() {
+                        color = c;
+                      })),
+            ));
+  }
+
+  Matiere? data() {
+    if (nameCt.text.isEmpty || shortNameCt.text.isEmpty) return null;
+    final duree = int.tryParse(dureeCt.text);
+    if (duree == null) return null;
+    return Matiere(widget.matiere.id, nameCt.text, shortNameCt.text, color,
+        colleDuree: duree, hasInitialCreneaux: hasInitialCreneaux);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Modifier la matière : ${widget.matiere.name}"),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextFormField(
+          decoration: const InputDecoration(labelText: "Nom"),
+          controller: nameCt,
+          onChanged: (_) => setState(() {}),
+        ),
+        TextFormField(
+          decoration: const InputDecoration(labelText: "Abbréviation"),
+          controller: shortNameCt,
+          onChanged: (_) => setState(() {}),
+        ),
+        TextFormField(
+          decoration: const InputDecoration(
+              labelText: "Durée d'une colle", suffixText: "minutes"),
+          controller: dureeCt,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 10),
+        CheckboxListTile(
+            title: const Text("Créneaux fixes"),
+            value: hasInitialCreneaux,
+            onChanged: (b) => setState(() {
+                  hasInitialCreneaux = b!;
+                })),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            ),
+            Text(color.toHexString(includeHashSign: true)),
+            IconButton(
+              onPressed: _showColorPicker,
+              icon: const Icon(Icons.edit),
+              color: color,
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+        ElevatedButton(
+            onPressed:
+                data() == null ? null : () => Navigator.of(context).pop(data()),
+            child: const Text("Enregistrer"))
+      ]),
     );
   }
 }

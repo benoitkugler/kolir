@@ -4,24 +4,28 @@ import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/settings.dart';
 
-class AttribueInfo extends StatefulWidget {
+class AttribueVariableCreneaux extends StatefulWidget {
+  final Matiere matiere;
   final CreneauHoraireProvider creneauxHoraires;
 
   final List<AssignmentResult> Function(
-          InformatiqueParams params, int semaineStart, int semaineEnd)
-      onPreviewAttributeInformatique;
-  final Function(List<AssigmentSuccess>, int semaineStart, String colleur)
-      onAttribute;
+      MatiereID matiere,
+      VariableCreneauxParams params,
+      int semaineStart,
+      int semaineEnd) onPreviewAttribute;
+  final Function(MatiereID matiere, List<AssigmentSuccess>, int semaineStart,
+      String colleur) onAttribute;
 
-  const AttribueInfo(this.creneauxHoraires, this.onPreviewAttributeInformatique,
-      this.onAttribute,
+  const AttribueVariableCreneaux(this.matiere, this.creneauxHoraires,
+      this.onPreviewAttribute, this.onAttribute,
       {super.key});
 
   @override
-  State<AttribueInfo> createState() => _AttribueInfoState();
+  State<AttribueVariableCreneaux> createState() =>
+      _AttribueVariableCreneauxState();
 }
 
-class _AttribueInfoState extends State<AttribueInfo> {
+class _AttribueVariableCreneauxState extends State<AttribueVariableCreneaux> {
   final CreneauxController creneaux = CreneauxController(false);
   final premiereSemaine = TextEditingController(text: "1");
   final derniereSemaine = TextEditingController();
@@ -102,8 +106,12 @@ class _AttribueInfoState extends State<AttribueInfo> {
           ),
           Expanded(
             child: results != null
-                ? _PreviewAssign(results!, previewPremiereSemaine!,
-                    (l, s) => widget.onAttribute(l, s, colleur.text))
+                ? _PreviewAssign(
+                    widget.matiere,
+                    results!,
+                    previewPremiereSemaine!,
+                    (l, s) => widget.onAttribute(
+                        widget.matiere.id, l, s, colleur.text))
                 : const Center(
                     child: Text(
                     "En attente de prévisualisation...",
@@ -116,8 +124,9 @@ class _AttribueInfoState extends State<AttribueInfo> {
 
   void _preview() {
     final ps = int.parse(premiereSemaine.text);
-    final out = widget.onPreviewAttributeInformatique(
-        InformatiqueParams(creneaux.creneaux, 2, 55),
+    final out = widget.onPreviewAttribute(
+        widget.matiere.id,
+        VariableCreneauxParams(creneaux.creneaux, 2, 55),
         ps,
         int.parse(derniereSemaine.text));
     setState(() {
@@ -128,12 +137,14 @@ class _AttribueInfoState extends State<AttribueInfo> {
 }
 
 class _PreviewAssign extends StatelessWidget {
+  final Matiere matiere;
   final List<AssignmentResult> results;
   final int premiereSemaine;
 
   final Function(List<AssigmentSuccess>, int premiereSemaine) onAttribute;
 
-  const _PreviewAssign(this.results, this.premiereSemaine, this.onAttribute,
+  const _PreviewAssign(
+      this.matiere, this.results, this.premiereSemaine, this.onAttribute,
       {super.key});
 
   bool get areResultsValid =>
@@ -146,7 +157,7 @@ class _PreviewAssign extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            "Prévisualisation des créneaux d'informatique",
+            "Prévisualisation des créneaux assignés",
             style: Theme.of(context).textTheme.titleLarge,
           ),
           Expanded(
@@ -201,7 +212,7 @@ class _ResultRow extends StatelessWidget {
     } else if (r is AssigmentSuccess) {
       color =
           r.hasWarning ? Colors.yellow.shade300 : Colors.lightGreen.shade400;
-      title = "Créneaux assignés";
+      title = "";
       body = Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: r.groupesForCreneaux
@@ -239,10 +250,11 @@ class _ResultRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Text(title),
-              ),
+              if (title.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Text(title),
+                ),
               body
             ],
           ),
