@@ -10,7 +10,7 @@ String matieresToHTML(Colloscope col) {
   final List<String> pages = [];
   for (var item in matieres.entries) {
     final creneaux = item.value;
-    final matiere = col.matieresList.values[item.key];
+    final matiere = col.matieresList.get(item.key);
 
     final colleursSet = <String>{};
     for (var semaine in creneaux) {

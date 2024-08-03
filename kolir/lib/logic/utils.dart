@@ -37,8 +37,10 @@ String formatDateTime(DateTime date, DateHeure time) {
   return "${formatDate(date, dense: true)} à ${time.formatHeure()}";
 }
 
+String formatMinute(int minute) => minute.toString().padLeft(2, "0");
+
 String _formatHeure(int hour, int minute) {
-  return "${hour}h${minute.toString().padLeft(2, "0")}";
+  return "${hour}h${formatMinute(minute)}";
 }
 
 DateHeure emptyDate() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:kolir/components/utils.dart';
 import 'package:kolir/components/week_calendar.dart';
 import 'package:kolir/logic/colloscope.dart';
@@ -12,6 +13,12 @@ class VueMatiereW extends StatelessWidget {
   final CreneauHoraireProvider horaires;
 
   final Map<MatiereID, VueMatiere> byMatieres;
+
+  final void Function(CreneauHoraireProvider) onUpdateHoraires;
+
+  final void Function() onCreateMatiere;
+  final void Function(Matiere matiere) onUpdateMatiere;
+  final void Function(Matiere matiere) onDeleteMatiere;
 
   final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines,
       String colleur) onAdd;
@@ -26,7 +33,11 @@ class VueMatiereW extends StatelessWidget {
   final void Function(int shift) onShiftSemaines;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
-      {required this.onAdd,
+      {required this.onUpdateHoraires,
+      required this.onCreateMatiere,
+      required this.onUpdateMatiere,
+      required this.onDeleteMatiere,
+      required this.onAdd,
       required this.onDeleteCreneau,
       required this.onDeleteSemaine,
       required this.onEditColleur,
@@ -40,6 +51,24 @@ class VueMatiereW extends StatelessWidget {
     return VueSkeleton(
       mode: ModeView.matieres,
       actions: [
+        ElevatedButton.icon(
+            onPressed: () async {
+              final newHoraires = await showDialog<CreneauHoraireProvider>(
+                  context: context,
+                  builder: (context) => _HorairesPicker(horaires));
+              if (newHoraires == null) return;
+              onUpdateHoraires(newHoraires);
+            },
+            icon: const Icon(Icons.calendar_view_day),
+            label: const Text("Editer les horaires")),
+        const SizedBox(width: 10),
+        ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightGreen.shade400),
+            onPressed: onCreateMatiere,
+            icon: const Icon(Icons.add),
+            label: const Text("Ajouter une matière")),
+        const SizedBox(width: 10),
         ElevatedButton(
             onPressed: () async {
               final shift = await showDialog<int>(
@@ -53,18 +82,20 @@ class VueMatiereW extends StatelessWidget {
       child: Expanded(
           child: ListView(
         key: const PageStorageKey("list_matiere"),
-        children: matieresList.values
+        children: matieresList.list
             .map((mat) => _MatiereW(
                   horaires,
                   mat,
-                  byMatieres[mat.index] ?? [],
-                  (h, s, c) => onAdd(mat.index, h, s, c),
-                  (index) => onDeleteCreneau(mat.index, index),
-                  (index) => onDeleteSemaine(mat.index, index),
-                  (index, colleur) => onEditColleur(mat.index, index, colleur),
-                  (index, salle) => onEditSalle(mat.index, index, salle),
+                  byMatieres[mat.id] ?? [],
+                  () => onDeleteMatiere(mat),
+                  onUpdateMatiere,
+                  (h, s, c) => onAdd(mat.id, h, s, c),
+                  (index) => onDeleteCreneau(mat.id, index),
+                  (index) => onDeleteSemaine(mat.id, index),
+                  (index, colleur) => onEditColleur(mat.id, index, colleur),
+                  (index, salle) => onEditSalle(mat.id, index, salle),
                   (nombre, periode) =>
-                      onRepeteMotifCourant(mat.index, nombre, periode),
+                      onRepeteMotifCourant(mat.id, nombre, periode),
                 ))
             .toList(),
       )),
@@ -197,9 +228,11 @@ class _MatiereW extends StatelessWidget {
   final Matiere matiere;
   final VueMatiere semaines;
 
+  final void Function() onDelete;
+  final void Function(Matiere) onUpdate;
   final void Function(List<DateHeure> hours, List<int> semaines, String colleur)
       onAdd;
-  final void Function(int creneauIndex) onDelete;
+  final void Function(int creneauIndex) onDeleteCreneau;
   final void Function(int semaine) onDeleteSemaine;
   final void Function(int creneauIndex, String colleur) onEditColleur;
   final void Function(int creneauIndex, String salle) onEditSalle;
@@ -210,8 +243,10 @@ class _MatiereW extends StatelessWidget {
       this.horaires,
       this.matiere,
       this.semaines,
-      this.onAdd,
       this.onDelete,
+      this.onUpdate,
+      this.onAdd,
+      this.onDeleteCreneau,
       this.onDeleteSemaine,
       this.onEditColleur,
       this.onEditSalle,
@@ -248,6 +283,14 @@ class _MatiereW extends StatelessWidget {
     }
   }
 
+  void _showEditMatiere(BuildContext context) async {
+    final updated = await showDialog<Matiere>(
+      context: context,
+      builder: (context) => _MatiereDetailsDialog(matiere),
+    );
+    if (updated != null) onUpdate(updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -259,9 +302,35 @@ class _MatiereW extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.1,
-                child: Text(matiere.format(),
-                    style: const TextStyle(fontSize: 18)),
+                width: MediaQuery.of(context).size.width * 0.12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(matiere.format(),
+                          style: const TextStyle(fontSize: 18)),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          splashRadius: 18,
+                          tooltip: "Modifier la matière",
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _showEditMatiere(context),
+                        ),
+                        IconButton(
+                          splashRadius: 18,
+                          color: Colors.red,
+                          tooltip: "Supprimer la matière",
+                          icon: const Icon(Icons.delete),
+                          onPressed: onDelete,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: SemaineList(
@@ -277,7 +346,8 @@ class _MatiereW extends StatelessWidget {
                                     children: semaine.item
                                         .map((e) => ColleW(e.toColle(matiere),
                                             showMatiere: false,
-                                            onDelete: (_) => onDelete(e.index),
+                                            onDelete: (_) =>
+                                                onDeleteCreneau(e.index),
                                             onEditColleur: (colleur) =>
                                                 onEditColleur(e.index, colleur),
                                             onEditSalle: (salle) =>
@@ -291,7 +361,7 @@ class _MatiereW extends StatelessWidget {
                                   color: Colors.red,
                                   tooltip:
                                       "Supprimer les créneaux de la semaine ${semaine.semaine}",
-                                  icon: const Icon(Icons.delete),
+                                  icon: const Icon(Icons.clear),
                                   onPressed: () =>
                                       onDeleteSemaine(semaine.semaine),
                                 ),
@@ -304,15 +374,19 @@ class _MatiereW extends StatelessWidget {
               Column(
                 children: [
                   ElevatedButton(
-                      onPressed: () => showAddCreneaux(context),
+                      onPressed: matiere.hasInitialCreneaux
+                          ? () => showAddCreneaux(context)
+                          : null,
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green),
+                          backgroundColor: Colors.lightGreen.shade400),
                       child: const Text("Ajouter des créneaux")),
                   const SizedBox(height: 10),
                   Tooltip(
                       message: "Répéter la structure courante n fois",
                       child: ElevatedButton(
-                          onPressed: () => showDuplicate(context),
+                          onPressed: matiere.hasInitialCreneaux
+                              ? () => showDuplicate(context)
+                              : null,
                           child: const Text("Répéter...")))
                 ],
               )
@@ -320,6 +394,257 @@ class _MatiereW extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MatiereDetailsDialog extends StatefulWidget {
+  final Matiere matiere;
+  const _MatiereDetailsDialog(this.matiere, {super.key});
+
+  @override
+  State<_MatiereDetailsDialog> createState() => _MatiereDetailsDialogState();
+}
+
+class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
+  final nameCt = TextEditingController();
+  final shortNameCt = TextEditingController();
+  final dureeCt = TextEditingController();
+  Color color = Colors.blue;
+  final colorCt = TextEditingController();
+  bool hasInitialCreneaux = true;
+
+  @override
+  initState() {
+    nameCt.text = widget.matiere.name;
+    shortNameCt.text = widget.matiere.shortName;
+    dureeCt.text = widget.matiere.colleDuree.toString();
+    color = widget.matiere.color;
+    colorCt.text = color.toHexString(includeHashSign: true);
+    hasInitialCreneaux = widget.matiere.hasInitialCreneaux;
+    super.initState();
+  }
+
+  _showColorPicker() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text("Modifier la couleur"),
+              content: MaterialPicker(
+                  pickerColor: color,
+                  onColorChanged: (c) => setState(() {
+                        color = c;
+                        colorCt.text = color.toHexString(includeHashSign: true);
+                      })),
+            ));
+  }
+
+  Matiere? data() {
+    if (nameCt.text.isEmpty || shortNameCt.text.isEmpty) return null;
+    final duree = int.tryParse(dureeCt.text);
+    if (duree == null) return null;
+    return Matiere(widget.matiere.id, nameCt.text, shortNameCt.text, color,
+        colleDuree: duree, hasInitialCreneaux: hasInitialCreneaux);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Modifier la matière : ${widget.matiere.name}"),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextFormField(
+          decoration: const InputDecoration(labelText: "Nom"),
+          controller: nameCt,
+          onChanged: (_) => setState(() {}),
+        ),
+        TextFormField(
+          decoration: const InputDecoration(labelText: "Abbréviation"),
+          controller: shortNameCt,
+          onChanged: (_) => setState(() {}),
+        ),
+        TextFormField(
+          decoration: const InputDecoration(
+              labelText: "Durée d'une colle",
+              suffixText: "minutes",
+              helperText: "Utilisé pour calculer les chevauchements"),
+          controller: dureeCt,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 10),
+        CheckboxListTile(
+            title: const Text("Créneaux fixes"),
+            value: hasInitialCreneaux,
+            onChanged: (b) => setState(() {
+                  hasInitialCreneaux = b!;
+                })),
+        const SizedBox(height: 10),
+        TextFormField(
+          readOnly: true,
+          onTap: _showColorPicker,
+          decoration: InputDecoration(
+              labelText: "Couleur",
+              hoverColor: color,
+              prefixIcon: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              ),
+              suffixIcon: Icon(
+                Icons.edit,
+                color: color,
+              )),
+          controller: colorCt,
+        ),
+        const SizedBox(height: 40),
+        ElevatedButton(
+            onPressed:
+                data() == null ? null : () => Navigator.of(context).pop(data()),
+            child: const Text("Enregistrer"))
+      ]),
+    );
+  }
+}
+
+class _HorairesPicker extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
+
+  const _HorairesPicker(this.horaires, {super.key});
+
+  @override
+  State<_HorairesPicker> createState() => __HorairesPickerState();
+}
+
+class __HorairesPickerState extends State<_HorairesPicker> {
+  late CreneauHoraireProvider horaires;
+  @override
+  void initState() {
+    horaires = widget.horaires.copy();
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HorairesPicker oldWidget) {
+    horaires = widget.horaires.copy();
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text("Modifier les horaires"),
+          IconButton.filledTonal(
+              onPressed: () async {
+                final creneau = await showDialog<CreneauHoraireData>(
+                    context: context,
+                    builder: (context) => const _CreneauHoraireDialog());
+                if (creneau == null) return;
+                setState(() => horaires.insert(creneau));
+              },
+              icon: const Icon(Icons.add),
+              color: Colors.green),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+            onPressed: horaires.values.isEmpty
+                ? null
+                : () => Navigator.of(context).pop(horaires),
+            child: const Text("Enregistrer"))
+      ],
+      content: SizedBox(
+        width: 400,
+        child: ListView(
+            shrinkWrap: true,
+            children: horaires.values
+                .map((e) => ListTile(
+                      title: Text("${e.hour}:${formatMinute(e.minute)}"),
+                      trailing: IconButton(
+                          onPressed: () =>
+                              setState(() => horaires.values.remove(e)),
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Colors.red,
+                          )),
+                    ))
+                .toList()),
+      ),
+    );
+  }
+}
+
+class _CreneauHoraireDialog extends StatefulWidget {
+  const _CreneauHoraireDialog({super.key});
+
+  @override
+  State<_CreneauHoraireDialog> createState() => __CreneauHoraireDialogState();
+}
+
+class __CreneauHoraireDialogState extends State<_CreneauHoraireDialog> {
+  int hour = 17;
+  int minute = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Nouveau créneau"),
+      content: Row(
+        children: [
+          DropdownMenu<int>(
+              label: const Text("Heure"),
+              initialSelection: hour,
+              dropdownMenuEntries: [
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23
+              ].map((e) => DropdownMenuEntry(value: e, label: "$e")).toList(),
+              onSelected: (h) => setState(() => hour = h!)),
+          const SizedBox(width: 10),
+          DropdownMenu<int>(
+              label: const Text("Minutes"),
+              initialSelection: minute,
+              dropdownMenuEntries: [
+                0,
+                5,
+                10,
+                15,
+                20,
+                25,
+                30,
+                35,
+                40,
+                45,
+                50,
+                55,
+              ].map((e) => DropdownMenuEntry(value: e, label: "$e")).toList(),
+              onSelected: (m) => setState(() => minute = m!))
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(CreneauHoraireData(hour, minute));
+            },
+            child: const Text("Ajouter"))
+      ],
     );
   }
 }

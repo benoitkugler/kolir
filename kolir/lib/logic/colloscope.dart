@@ -81,10 +81,10 @@ class Colloscope {
     this.groupes, {
     this.notes = "",
     this.creneauxHoraires = defautHoraires,
-    this.matieresList = defautMatieres,
+    this.matieresList = const MatiereProvider([]),
     this.semaines = const SemaineProvider({}),
   }) {
-    matieresList = defautMatieres;
+    matieresList = defautMatieres.copy();
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
 
@@ -92,8 +92,6 @@ class Colloscope {
     assert(_matieres.values.every((l) =>
         l.every((cr) => cr.groupeID == null || gm.containsKey(cr.groupeID))));
 
-    assert(List.generate(matieresList.values.length,
-        (index) => index == matieresList.values[index].index).every((e) => e));
     final mm = _matiereMap;
     assert(_matieres.keys.every((id) => mm.containsKey(id)));
   }
@@ -178,7 +176,7 @@ class Colloscope {
 
   Map<GroupeID, Groupe> get _groupeMap => groupeMap(groupes);
   Map<MatiereID, Matiere> get _matiereMap =>
-      Map.fromEntries(matieresList.values.map((e) => MapEntry(e.index, e)));
+      Map.fromEntries(matieresList.list.map((e) => MapEntry(e.id, e)));
 
   // resoud les indirections sur les groupes et matières
   PopulatedCreneau _publy(
@@ -230,6 +228,7 @@ class Colloscope {
   }
 
   VueGroupe _groupeSemaines(GroupeID groupe) {
+    final byMatiere = _matiereMap;
     final semaines = <int, List<Colle>>{};
     for (var element in _matieres.entries) {
       final matiere = element.key;
@@ -239,7 +238,7 @@ class Colloscope {
         final cr = element.value[creneauIndex];
         if (cr.groupeID == groupe) {
           final semaine = semaines.putIfAbsent(cr.date.semaine, () => []);
-          semaine.add(Colle(creneauIndex, cr.date, matieresList.values[matiere],
+          semaine.add(Colle(creneauIndex, cr.date, byMatiere[matiere]!,
               cr.colleur, cr.salle));
         }
       }
@@ -407,6 +406,17 @@ class Colloscope {
     _matieres.clear();
     groupes.clear();
     notes = "";
+  }
+
+  Matiere createMatiere() => matieresList.create();
+
+  void updateMatiere(Matiere matiere) {
+    matieresList.update(matiere);
+  }
+
+  void deleteMatiere(Matiere matiere) {
+    _matieres.remove(matiere.id);
+    matieresList.list.removeWhere((element) => element.id == matiere.id);
   }
 
   void addGroupe() {
@@ -653,8 +663,8 @@ class Colloscope {
     return AssigmentSuccess(l, gm.length);
   }
 
-  AssignmentResult _attribueInformatique(
-      InformatiqueParams params, int semaine) {
+  AssignmentResult _attribueVariablesCreneaux(
+      MatiereID matiere, VariableCreneauxParams params, int semaine) {
     // établit la liste des groupes disponibles sur chaque créneau candidat
     final byMatiere = _semaineMap()[semaine] ?? {};
     // creneau identified by its index
@@ -718,21 +728,21 @@ class Colloscope {
     return bestFailure!;
   }
 
-  /// [previewAttributeInformatique] calcule les créneaux d'informatique
+  /// [previewAttributeVariables] calcule les créneaux variables
   /// et les renvoie, sans modifier le colloscope.
-  List<AssignmentResult> previewAttributeInformatique(
-      InformatiqueParams params, int semaineStart, int semaineEnd) {
+  List<AssignmentResult> previewAttributeVariables(MatiereID matiere,
+      VariableCreneauxParams params, int semaineStart, int semaineEnd) {
     final out = <AssignmentResult>[];
     for (var semaine = semaineStart; semaine <= semaineEnd; semaine++) {
-      final res = _attribueInformatique(params, semaine);
+      final res = _attribueVariablesCreneaux(matiere, params, semaine);
       out.add(res);
     }
     return out;
   }
 
-  void attributeInformatique(
-      List<AssigmentSuccess> assignments, int semaineStart, String colleur) {
-    final infoList = _matieres.putIfAbsent(informatiqueID, () => []);
+  void attributeVariables(MatiereID matiere, List<AssigmentSuccess> assignments,
+      int semaineStart, String colleur) {
+    final infoList = _matieres.putIfAbsent(matiere, () => []);
     for (var i = 0; i < assignments.length; i++) {
       final semaine = semaineStart + i;
       final item = assignments[i];
@@ -899,7 +909,7 @@ class PopulatedCreneau {
 
   Colle toColle(Matiere matiere) => Colle(index, date, matiere, colleur, salle);
 
-  CreneauID get id => CreneauID(matiere.index, index);
+  CreneauID get id => CreneauID(matiere.id, index);
 }
 
 class SemaineTo<T> {

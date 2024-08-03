@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:kolir/logic/colloscope.dart';
 import 'package:kolir/logic/export/creneaux.dart';
 import 'package:kolir/logic/export/groupes.dart';
@@ -90,5 +91,46 @@ void main() {
       6: DateTime(2022, DateTime.november, 7),
     });
     expect(sf2.dateFor(1, 1), equals(DateTime(2022, 9, 19)));
+  });
+
+  test("Horaires", () {
+    final provider = CreneauHoraireProvider([
+      CreneauHoraireData(8, 0),
+      CreneauHoraireData(8, 50),
+      CreneauHoraireData(9, 15)
+    ]);
+
+    provider.insert(CreneauHoraireData(8, 15));
+    expect(
+        listEquals(provider.values, [
+          CreneauHoraireData(8, 0),
+          CreneauHoraireData(8, 15),
+          CreneauHoraireData(8, 50),
+          CreneauHoraireData(9, 15)
+        ]),
+        true);
+
+    provider.insert(CreneauHoraireData(7, 0));
+    expect(
+        listEquals(provider.values, [
+          CreneauHoraireData(7, 0),
+          CreneauHoraireData(8, 0),
+          CreneauHoraireData(8, 15),
+          CreneauHoraireData(8, 50),
+          CreneauHoraireData(9, 15)
+        ]),
+        true);
+
+    provider.insert(CreneauHoraireData(10, 50));
+    expect(
+        listEquals(provider.values, [
+          CreneauHoraireData(7, 0),
+          CreneauHoraireData(8, 0),
+          CreneauHoraireData(8, 15),
+          CreneauHoraireData(8, 50),
+          CreneauHoraireData(9, 15),
+          CreneauHoraireData(10, 50),
+        ]),
+        true);
   });
 }

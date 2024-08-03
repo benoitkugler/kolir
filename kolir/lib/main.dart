@@ -108,6 +108,24 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     }
   }
 
+  void createMatiere() {
+    setState(() {
+      currentColloscope.createMatiere();
+    });
+  }
+
+  void updateMatiere(Matiere matiere) {
+    setState(() {
+      currentColloscope.updateMatiere(matiere);
+    });
+  }
+
+  void deleteMatiere(Matiere matiere) {
+    setState(() {
+      currentColloscope.deleteMatiere(matiere);
+    });
+  }
+
   void addGroupe() {
     setState(() {
       currentColloscope.addGroupe();
@@ -204,17 +222,26 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
-  void attributeInformatique(
-      List<AssigmentSuccess> assignments, int semaineStart, String colleur) {
+  void attributeVariables(MatiereID matiere, List<AssigmentSuccess> assignments,
+      int semaineStart, String colleur) {
     setState(() {
-      currentColloscope.attributeInformatique(
-          assignments, semaineStart, colleur);
+      currentColloscope.attributeVariables(
+          matiere, assignments, semaineStart, colleur);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Créneaux attribués"), backgroundColor: Colors.green));
+  }
+
+  void updateHoraires(CreneauHoraireProvider horaires) {
+    setState(() {
+      currentColloscope.creneauxHoraires = horaires;
     });
   }
 
   void _export() async {
     final colors =
-        currentColloscope.matieresList.values.map((m) => m.color).toList();
+        currentColloscope.matieresList.list.map((m) => m.color).toList();
     final matieres = matieresToHTML(currentColloscope);
     final groupes = groupesToHTML(currentColloscope, colors);
     final semaines = semainesToHTML(currentColloscope, colors);
@@ -228,6 +255,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     final creneauxPath =
         await saveDocument(creneaux, "colloscope_creneaux.html");
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath \n$creneauxPath"),
@@ -261,15 +289,19 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onClearMatiere: clearMatiere,
           onSetupAttribueAuto: currentColloscope.setupAttribueAuto,
           onAttributeAuto: attribueAuto,
-          onPreviewAttributeInformatique:
-              currentColloscope.previewAttributeInformatique,
-          onAttributeInformatique: attributeInformatique,
+          onPreviewAttributeVariables:
+              currentColloscope.previewAttributeVariables,
+          onAttributeVariables: attributeVariables,
         );
       case ModeView.matieres:
         return VueMatiereW(
           currentColloscope.matieresList,
           currentColloscope.creneauxHoraires,
           currentColloscope.parMatiere(),
+          onUpdateHoraires: updateHoraires,
+          onCreateMatiere: createMatiere,
+          onUpdateMatiere: updateMatiere,
+          onDeleteMatiere: deleteMatiere,
           onAdd: addCreneaux,
           onDeleteCreneau: deleteCreneau,
           onDeleteSemaine: deleteSemaine,
@@ -357,6 +389,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                   onPressed: _export,
                   icon: const Icon(Icons.download),
                   label: const Text("Exporter"))),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Sauvegarder le colloscope actuel sur le disque.",
             child: ElevatedButton.icon(
@@ -367,6 +400,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 ),
                 label: const Text("Enregistrer")),
           ),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Revenir à la dernière sauvegarde.",
             child: ElevatedButton.icon(
@@ -377,6 +411,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 ),
                 label: const Text("Annuler")),
           ),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Modifier les notes",
             child: IconButton(
@@ -384,6 +419,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 onPressed: _editNotes,
                 icon: const Icon(Icons.edit_note_rounded)),
           ),
+          const SizedBox(width: 2),
           Tooltip(
               message: "Vider entièrement le colloscope.",
               child: ElevatedButton.icon(

@@ -235,8 +235,8 @@ class _AssistantCreneauxState extends State<AssistantCreneaux> {
                             ? null
                             : () => widget.onAdd(selectedCreneaux.creneaux,
                                 semaines, colleurController.text),
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.lightGreen.shade400),
                     child: const Text("Ajouter")),
               ],
             ),

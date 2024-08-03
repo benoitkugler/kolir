@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
@@ -11,6 +12,9 @@ class CreneauHoraireData {
   final int lengthInMinutes;
   const CreneauHoraireData(this.hour, this.minute, {this.lengthInMinutes = 60});
 
+  @override
+  String toString() => "$hour:$minute";
+
   Map<String, dynamic> toJson() {
     return {
       "hour": hour,
@@ -23,6 +27,11 @@ class CreneauHoraireData {
     return CreneauHoraireData(json["hour"], json["minute"],
         lengthInMinutes: json["lengthInMinutes"] ?? 60);
   }
+
+  int get _duration => hour * 60 + minute;
+
+  bool operator >(Object other) =>
+      other is CreneauHoraireData && (_duration > other._duration);
 
   @override
   bool operator ==(Object other) =>
@@ -38,6 +47,7 @@ class CreneauHoraireData {
 }
 
 class CreneauHoraireProvider {
+  // sorted list
   final List<CreneauHoraireData> values;
   const CreneauHoraireProvider(this.values);
 
@@ -66,6 +76,16 @@ class CreneauHoraireProvider {
   }
 
   double get oneHourRatio => 1 / (lastHour - firstHour);
+
+  /// insert [cr] at the right position
+  void insert(CreneauHoraireData cr) {
+    final index = values.indexWhere((current) => current > cr);
+    if (index == -1) {
+      values.add(cr);
+    } else {
+      values.insert(index, cr);
+    }
+  }
 }
 
 const defautHoraires = CreneauHoraireProvider([
@@ -89,16 +109,19 @@ const defautHoraires = CreneauHoraireProvider([
 typedef MatiereID = int;
 
 class Matiere {
-  /// [index] est l'identifiant unique
-  final MatiereID index;
+  /// [id] est l'identifiant unique
+  final MatiereID id;
   final String name;
   final String shortName;
   final Color color;
 
   /// [colleDuree] est la durée d'une colle, en minute
   final int colleDuree;
-  const Matiere(this.index, this.name, this.shortName, this.color,
-      {this.colleDuree = 55});
+
+  /// is false, the creneaux are defined when attributing groups
+  final bool hasInitialCreneaux;
+  const Matiere(this.id, this.name, this.shortName, this.color,
+      {this.colleDuree = 55, this.hasInitialCreneaux = true});
 
   String format({bool dense = false}) {
     return dense ? shortName : name;
@@ -106,21 +129,23 @@ class Matiere {
 
   Map<String, dynamic> toJson() {
     return {
-      "index": index,
+      "id": id,
       "name": name,
       "shortName": shortName,
       "color": color.value,
       "colleDuree": colleDuree,
+      "hasInitialCreneaux": hasInitialCreneaux,
     };
   }
 
   factory Matiere.fromJson(Map<String, dynamic> json) {
     return Matiere(
-      json["index"],
+      json["id"],
       json["name"],
       json["shortName"],
       Color(json["color"] as int),
       colleDuree: json["colleDuree"] ?? 55,
+      hasInitialCreneaux: json["hasInitialCreneaux"] ?? true,
     );
   }
 
@@ -128,27 +153,32 @@ class Matiere {
   bool operator ==(Object other) =>
       other is Matiere &&
       other.runtimeType == runtimeType &&
-      other.index == index &&
+      other.id == id &&
       other.name == name &&
       other.shortName == shortName &&
       other.color.value == color.value &&
-      other.colleDuree == colleDuree;
+      other.colleDuree == colleDuree &&
+      other.hasInitialCreneaux == hasInitialCreneaux;
 
   @override
   int get hashCode =>
-      index.hashCode +
+      id.hashCode +
       name.hashCode +
       shortName.hashCode +
       color.hashCode +
-      colleDuree.hashCode;
+      colleDuree.hashCode +
+      hasInitialCreneaux.hashCode;
 }
 
 class MatiereProvider {
-  final List<Matiere> values;
-  const MatiereProvider(this.values);
+  final List<Matiere> _values;
+  const MatiereProvider(List<Matiere> values) : _values = values;
+
+  Matiere get(MatiereID m) => _values.firstWhere((element) => element.id == m);
+  List<Matiere> get list => _values;
 
   List<dynamic> toJson() {
-    return values.map((e) => e.toJson()).toList();
+    return _values.map((e) => e.toJson()).toList();
   }
 
   factory MatiereProvider.fromJson(dynamic json) {
@@ -157,15 +187,26 @@ class MatiereProvider {
   }
 
   MatiereProvider copy() {
-    return MatiereProvider(values.map((e) => e).toList());
+    return MatiereProvider(_values.map((e) => e).toList());
   }
 
   bool equals(MatiereProvider other) {
-    return values.equals(other.values);
+    return _values.equals(other._values);
+  }
+
+  Matiere create() {
+    final newID = (_values.map((e) => e.id).maxOrNull ?? 0) + 1;
+    final out = Matiere(
+        newID, "Nouvelle matière", "", Color(Random().nextInt(1 << 32)));
+    _values.add(out);
+    return out;
+  }
+
+  update(Matiere matiere) {
+    final index = _values.indexWhere((element) => element.id == matiere.id);
+    _values[index] = matiere;
   }
 }
-
-const MatiereID informatiqueID = 7;
 
 const defautMatieres = MatiereProvider([
   Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1)),
@@ -177,11 +218,11 @@ const defautMatieres = MatiereProvider([
   Matiere(4, "Espagnol", "Espa.", Color.fromARGB(255, 235, 107, 107)),
   Matiere(5, "Francais", "Fran.", Color.fromARGB(255, 90, 185, 103)),
   Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58)),
-  Matiere(informatiqueID, "Informatique (TP)", "Info.",
-      Color.fromRGBO(18, 203, 228, 1))
+  Matiere(7, "Informatique (TP)", "Info.", Color.fromRGBO(18, 203, 228, 1),
+      hasInitialCreneaux: false)
 ]);
 
-final _defautFirstMonday = DateTime(2023, DateTime.september, 4);
+final _defautFirstMonday = DateTime(2024, DateTime.september, 2);
 
 /// [SemaineProvider] spécifie le jour du calendrier réel
 /// associé à chaque lundi, permettant de prendre en compte
@@ -239,10 +280,10 @@ class SemaineProvider {
 // Informatique
 //
 
-class InformatiqueParams {
+class VariableCreneauxParams {
   final List<DateHeure> creneauxCandidats; // la semaine est ignorée
   final int nbCreneauToAssign; // le nombre de créneaux à définir par semaine
   final int colleDuree; // durée d'une séance, en minutes (typiquement 55)
-  const InformatiqueParams(
+  const VariableCreneauxParams(
       this.creneauxCandidats, this.nbCreneauToAssign, this.colleDuree);
 }
