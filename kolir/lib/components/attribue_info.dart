@@ -96,8 +96,8 @@ class _AttribueVariableCreneauxState extends State<AttribueVariableCreneaux> {
                 ),
                 ElevatedButton.icon(
                   onPressed: areParamsValid ? _preview : null,
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.lightGreen.shade400),
                   label: const Icon(Icons.chevron_right),
                   icon: const Text("Prévisualiser"),
                 ),

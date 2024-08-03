@@ -229,7 +229,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           matiere, assignments, semaineStart, colleur);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Créneaux attribués"), backgroundColor: Colors.green));
   }
 
@@ -249,6 +249,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     final creneauxPath =
         await saveDocument(creneaux, "colloscope_creneaux.html");
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             "Colloscope exporté dans :\n$matieresPath \n$groupesPath \n$semainesPath \n$creneauxPath"),
@@ -381,6 +382,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                   onPressed: _export,
                   icon: const Icon(Icons.download),
                   label: const Text("Exporter"))),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Sauvegarder le colloscope actuel sur le disque.",
             child: ElevatedButton.icon(
@@ -391,6 +393,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 ),
                 label: const Text("Enregistrer")),
           ),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Revenir à la dernière sauvegarde.",
             child: ElevatedButton.icon(
@@ -401,6 +404,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 ),
                 label: const Text("Annuler")),
           ),
+          const SizedBox(width: 2),
           Tooltip(
             message: "Modifier les notes",
             child: IconButton(
@@ -408,6 +412,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
                 onPressed: _editNotes,
                 icon: const Icon(Icons.edit_note_rounded)),
           ),
+          const SizedBox(width: 2),
           Tooltip(
               message: "Vider entièrement le colloscope.",
               child: ElevatedButton.icon(

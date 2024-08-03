@@ -358,7 +358,8 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
             children: [
               ElevatedButton(
                 onPressed: addEntry,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightGreen.shade400),
                 child: const Text("Ajouter une semaine"),
               ),
               const Spacer(),
