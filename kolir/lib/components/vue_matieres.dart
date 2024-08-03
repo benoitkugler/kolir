@@ -14,6 +14,8 @@ class VueMatiereW extends StatelessWidget {
 
   final Map<MatiereID, VueMatiere> byMatieres;
 
+  final void Function(CreneauHoraireProvider) onUpdateHoraires;
+
   final void Function() onCreateMatiere;
   final void Function(Matiere matiere) onUpdateMatiere;
   final void Function(Matiere matiere) onDeleteMatiere;
@@ -31,7 +33,8 @@ class VueMatiereW extends StatelessWidget {
   final void Function(int shift) onShiftSemaines;
 
   const VueMatiereW(this.matieresList, this.horaires, this.byMatieres,
-      {required this.onCreateMatiere,
+      {required this.onUpdateHoraires,
+      required this.onCreateMatiere,
       required this.onUpdateMatiere,
       required this.onDeleteMatiere,
       required this.onAdd,
@@ -49,7 +52,19 @@ class VueMatiereW extends StatelessWidget {
       mode: ModeView.matieres,
       actions: [
         ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () async {
+              final newHoraires = await showDialog<CreneauHoraireProvider>(
+                  context: context,
+                  builder: (context) => _HorairesPicker(horaires));
+              if (newHoraires == null) return;
+              onUpdateHoraires(newHoraires);
+            },
+            icon: const Icon(Icons.calendar_view_day),
+            label: const Text("Editer les horaires")),
+        const SizedBox(width: 10),
+        ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightGreen.shade400),
             onPressed: onCreateMatiere,
             icon: const Icon(Icons.add),
             label: const Text("Ajouter une matière")),
@@ -287,12 +302,15 @@ class _MatiereW extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.1,
+                width: MediaQuery.of(context).size.width * 0.12,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(matiere.format(),
-                        style: const TextStyle(fontSize: 18)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(matiere.format(),
+                          style: const TextStyle(fontSize: 18)),
+                    ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -343,7 +361,7 @@ class _MatiereW extends StatelessWidget {
                                   color: Colors.red,
                                   tooltip:
                                       "Supprimer les créneaux de la semaine ${semaine.semaine}",
-                                  icon: const Icon(Icons.delete),
+                                  icon: const Icon(Icons.clear),
                                   onPressed: () =>
                                       onDeleteSemaine(semaine.semaine),
                                 ),
@@ -360,7 +378,7 @@ class _MatiereW extends StatelessWidget {
                           ? () => showAddCreneaux(context)
                           : null,
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green),
+                          backgroundColor: Colors.lightGreen.shade400),
                       child: const Text("Ajouter des créneaux")),
                   const SizedBox(height: 10),
                   Tooltip(
@@ -478,6 +496,149 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
                 data() == null ? null : () => Navigator.of(context).pop(data()),
             child: const Text("Enregistrer"))
       ]),
+    );
+  }
+}
+
+class _HorairesPicker extends StatefulWidget {
+  final CreneauHoraireProvider horaires;
+
+  const _HorairesPicker(this.horaires, {super.key});
+
+  @override
+  State<_HorairesPicker> createState() => __HorairesPickerState();
+}
+
+class __HorairesPickerState extends State<_HorairesPicker> {
+  late CreneauHoraireProvider horaires;
+  @override
+  void initState() {
+    horaires = widget.horaires.copy();
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HorairesPicker oldWidget) {
+    horaires = widget.horaires.copy();
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text("Modifier les horaires"),
+          IconButton.filledTonal(
+              onPressed: () async {
+                final creneau = await showDialog<CreneauHoraireData>(
+                    context: context,
+                    builder: (context) => const _CreneauHoraireDialog());
+                if (creneau == null) return;
+                setState(() => horaires.insert(creneau));
+              },
+              icon: const Icon(Icons.add),
+              color: Colors.green),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+            onPressed: horaires.values.isEmpty
+                ? null
+                : () => Navigator.of(context).pop(horaires),
+            child: const Text("Enregistrer"))
+      ],
+      content: SizedBox(
+        width: 400,
+        child: ListView(
+            shrinkWrap: true,
+            children: horaires.values
+                .map((e) => ListTile(
+                      title: Text("${e.hour}:${formatMinute(e.minute)}"),
+                      trailing: IconButton(
+                          onPressed: () =>
+                              setState(() => horaires.values.remove(e)),
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Colors.red,
+                          )),
+                    ))
+                .toList()),
+      ),
+    );
+  }
+}
+
+class _CreneauHoraireDialog extends StatefulWidget {
+  const _CreneauHoraireDialog({super.key});
+
+  @override
+  State<_CreneauHoraireDialog> createState() => __CreneauHoraireDialogState();
+}
+
+class __CreneauHoraireDialogState extends State<_CreneauHoraireDialog> {
+  int hour = 17;
+  int minute = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Nouveau créneau"),
+      content: Row(
+        children: [
+          DropdownMenu<int>(
+              label: const Text("Heure"),
+              initialSelection: hour,
+              dropdownMenuEntries: [
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23
+              ].map((e) => DropdownMenuEntry(value: e, label: "$e")).toList(),
+              onSelected: (h) => setState(() => hour = h!)),
+          const SizedBox(width: 10),
+          DropdownMenu<int>(
+              label: const Text("Minutes"),
+              initialSelection: minute,
+              dropdownMenuEntries: [
+                0,
+                5,
+                10,
+                15,
+                20,
+                25,
+                30,
+                35,
+                40,
+                45,
+                50,
+                55,
+              ].map((e) => DropdownMenuEntry(value: e, label: "$e")).toList(),
+              onSelected: (m) => setState(() => minute = m!))
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(CreneauHoraireData(hour, minute));
+            },
+            child: const Text("Ajouter"))
+      ],
     );
   }
 }

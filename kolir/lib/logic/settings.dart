@@ -12,6 +12,9 @@ class CreneauHoraireData {
   final int lengthInMinutes;
   const CreneauHoraireData(this.hour, this.minute, {this.lengthInMinutes = 60});
 
+  @override
+  String toString() => "$hour:$minute";
+
   Map<String, dynamic> toJson() {
     return {
       "hour": hour,
@@ -24,6 +27,11 @@ class CreneauHoraireData {
     return CreneauHoraireData(json["hour"], json["minute"],
         lengthInMinutes: json["lengthInMinutes"] ?? 60);
   }
+
+  int get _duration => hour * 60 + minute;
+
+  bool operator >(Object other) =>
+      other is CreneauHoraireData && (_duration > other._duration);
 
   @override
   bool operator ==(Object other) =>
@@ -39,6 +47,7 @@ class CreneauHoraireData {
 }
 
 class CreneauHoraireProvider {
+  // sorted list
   final List<CreneauHoraireData> values;
   const CreneauHoraireProvider(this.values);
 
@@ -67,6 +76,16 @@ class CreneauHoraireProvider {
   }
 
   double get oneHourRatio => 1 / (lastHour - firstHour);
+
+  /// insert [cr] at the right position
+  void insert(CreneauHoraireData cr) {
+    final index = values.indexWhere((current) => current > cr);
+    if (index == -1) {
+      values.add(cr);
+    } else {
+      values.insert(index, cr);
+    }
+  }
 }
 
 const defautHoraires = CreneauHoraireProvider([

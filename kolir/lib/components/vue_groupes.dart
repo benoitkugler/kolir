@@ -81,7 +81,8 @@ class _VueGroupeWState extends State<VueGroupeW> {
       _DiagnosticAlert(widget.diagnostics, scrollToFirstDiagnostic),
       const SizedBox(width: 10),
       ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.lightGreen.shade400),
           onPressed: isInEdit ? null : widget.onAddGroupe,
           icon: const Icon(Icons.add),
           label: const Text("Ajouter un groupe")),
@@ -599,7 +600,7 @@ class _DiagnosticW extends StatelessWidget {
             child: RichText(
                 text: TextSpan(
                     style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyText1?.color),
+                        color: Theme.of(context).textTheme.bodyMedium?.color),
                     children: [
                   const TextSpan(text: "Nombre max. de colles par semaine : "),
                   TextSpan(
@@ -921,8 +922,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                 : ElevatedButton(
                     onPressed: isSelectionValide() ? _onAttribue : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
+                        backgroundColor: Colors.lightGreen.shade400),
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8.0),
                       child: Text(

@@ -233,6 +233,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
         content: Text("Créneaux attribués"), backgroundColor: Colors.green));
   }
 
+  void updateHoraires(CreneauHoraireProvider horaires) {
+    setState(() {
+      currentColloscope.creneauxHoraires = horaires;
+    });
+  }
+
   void _export() async {
     final colors =
         currentColloscope.matieresList.list.map((m) => m.color).toList();
@@ -292,6 +298,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           currentColloscope.matieresList,
           currentColloscope.creneauxHoraires,
           currentColloscope.parMatiere(),
+          onUpdateHoraires: updateHoraires,
           onCreateMatiere: createMatiere,
           onUpdateMatiere: updateMatiere,
           onDeleteMatiere: deleteMatiere,
