@@ -411,6 +411,7 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
   final shortNameCt = TextEditingController();
   final dureeCt = TextEditingController();
   Color color = Colors.blue;
+  final colorCt = TextEditingController();
   bool hasInitialCreneaux = true;
 
   @override
@@ -419,6 +420,7 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
     shortNameCt.text = widget.matiere.shortName;
     dureeCt.text = widget.matiere.colleDuree.toString();
     color = widget.matiere.color;
+    colorCt.text = color.toHexString(includeHashSign: true);
     hasInitialCreneaux = widget.matiere.hasInitialCreneaux;
     super.initState();
   }
@@ -432,6 +434,7 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
                   pickerColor: color,
                   onColorChanged: (c) => setState(() {
                         color = c;
+                        colorCt.text = color.toHexString(includeHashSign: true);
                       })),
             ));
   }
@@ -461,7 +464,9 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
         ),
         TextFormField(
           decoration: const InputDecoration(
-              labelText: "Durée d'une colle", suffixText: "minutes"),
+              labelText: "Durée d'une colle",
+              suffixText: "minutes",
+              helperText: "Utilisé pour calculer les chevauchements"),
           controller: dureeCt,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -474,21 +479,22 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
                   hasInitialCreneaux = b!;
                 })),
         const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-            ),
-            Text(color.toHexString(includeHashSign: true)),
-            IconButton(
-              onPressed: _showColorPicker,
-              icon: const Icon(Icons.edit),
-              color: color,
-            ),
-          ],
+        TextFormField(
+          readOnly: true,
+          onTap: _showColorPicker,
+          decoration: InputDecoration(
+              labelText: "Couleur",
+              hoverColor: color,
+              prefixIcon: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              ),
+              suffixIcon: Icon(
+                Icons.edit,
+                color: color,
+              )),
+          controller: colorCt,
         ),
         const SizedBox(height: 40),
         ElevatedButton(
