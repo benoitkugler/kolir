@@ -1,0 +1,12 @@
+---
+layout: post
+title: "Mise à jour v1.2"
+date: 2024-08-03 09:48:02 +0200
+categories: kolir update
+---
+
+## Nouvelle version
+
+La version 1.2 est disponible pour [Windows]({{ site.url }}/kolir/bin/Kolir-v12.exe) et pour [Mac]({{ site.url }}/kolir/bin/Kolir-v12.dmg).
+
+Cette nouvelle version permet de modifier les matières et les horaires des créneaux, permettant de toucher des utilisateurs d'autres filières ou lycées.
