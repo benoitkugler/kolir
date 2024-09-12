@@ -849,42 +849,45 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              flex: 1,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text(
-                  "Choix des groupes",
-                  style: TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                ListView(
-                    shrinkWrap: true,
-                    children: widget.groupes
-                        .map((e) => CheckboxListTile(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6)),
-                            dense: true,
-                            title: Text(e.name),
-                            selected: selectedGroupes.contains(e.id),
-                            value: selectedGroupes.contains(e.id),
-                            onChanged: (checked) =>
-                                onSelectGroupe(e.id, checked!)))
-                        .toList()),
-              ]),
-            ),
-            Expanded(
-              flex: 6,
-              child: _AssistantMatiereCreneaux(
-                selectedSemaines,
-                widget.matiere,
-                widget.creneaux,
-                onSelectSemaines,
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text(
+                    "Choix des groupes",
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView(
+                        shrinkWrap: true,
+                        children: widget.groupes
+                            .map((e) => CheckboxListTile(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6)),
+                                dense: true,
+                                title: Text(e.name),
+                                selected: selectedGroupes.contains(e.id),
+                                value: selectedGroupes.contains(e.id),
+                                onChanged: (checked) =>
+                                    onSelectGroupe(e.id, checked!)))
+                            .toList()),
+                  ),
+                ]),
               ),
-            ),
-          ],
+              Expanded(
+                flex: 6,
+                child: _AssistantMatiereCreneaux(
+                  selectedSemaines,
+                  widget.matiere,
+                  widget.creneaux,
+                  onSelectSemaines,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
         Row(children: [
