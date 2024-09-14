@@ -12,13 +12,13 @@ import 'package:kolir/logic/utils.dart';
 /// De plus uniquement les contraintes de la première semaine sont prises en compte.
 /// Une erreur est renvoyé si aucune rotation ne satisfait les contraintes.
 Maybe<RotationSelector> setupRotations(
-    MatiereID matiere,
+    Matiere matiere,
     List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine,
     List<Groupe> groupes,
-    Map<GroupeID, List<DateHeure>> alreadyAttributed,
+    Map<GroupeID, List<DateHeureDuree>> alreadyAttributed,
     int periode) {
-  final builder =
-      _RotationBuilder(creneauxParSemaine, groupes, alreadyAttributed);
+  final builder = _RotationBuilder(
+      creneauxParSemaine, groupes, matiere.colleDuree, alreadyAttributed);
   final res = builder._build(periode);
   if (res.error.isNotEmpty) {
     return Maybe(RotationSelector(0, [], [], [], 0), res.error);
@@ -26,19 +26,34 @@ Maybe<RotationSelector> setupRotations(
 
   return Maybe(
       RotationSelector(
-          matiere, creneauxParSemaine, res.value, groupes, periode),
+          matiere.id, creneauxParSemaine, res.value, groupes, periode),
       "");
+}
+
+class DateHeureDuree {
+  final DateHeure date;
+  final int duree; // en minutes
+  const DateHeureDuree(this.date, this.duree);
+
+  bool intersects(DateHeureDuree other) {
+    final start1 = date.toDateTime();
+    final end1 = start1.add(Duration(minutes: duree));
+    final start2 = other.date.toDateTime();
+    final end2 = start2.add(Duration(minutes: other.duree));
+    return start2.isBefore(end1) && end2.isAfter(start1);
+  }
 }
 
 class _RotationBuilder {
   final List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine;
   final List<Groupe> groupes;
+  final int matiereDuree;
 
   /// [alreadyAttributed] is added to the groupe constraints
-  final Map<GroupeID, List<DateHeure>> alreadyAttributed;
+  final Map<GroupeID, List<DateHeureDuree>> alreadyAttributed;
 
-  _RotationBuilder(
-      this.creneauxParSemaine, this.groupes, this.alreadyAttributed) {
+  _RotationBuilder(this.creneauxParSemaine, this.groupes, this.matiereDuree,
+      this.alreadyAttributed) {
     assert(creneauxParSemaine.isNotEmpty);
     assert(creneauxParSemaine.map((e) => e.item.length).toSet().length == 1);
     assert(creneauxParSemaine.isSortedBy<num>((s) => s.semaine));
@@ -98,10 +113,12 @@ class _RotationBuilder {
   bool _passConstraintOccupied(
       SemaineTo<List<PopulatedCreneau>> week, Permutation candidate) {
     for (var i = 0; i < week.item.length; i++) {
-      final date = week.item[i].date;
+      final creneau = week.item[i];
       final groupeID = candidate[i];
-      if ((alreadyAttributed[groupeID] ?? []).contains(date)) {
-        return false;
+      final plage2 = DateHeureDuree(creneau.date, creneau.matiere.colleDuree);
+      final l = alreadyAttributed[groupeID] ?? [];
+      for (var plage1 in l) {
+        if (plage1.intersects(plage2)) return false;
       }
     }
     return true;

@@ -126,6 +126,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void emptyCreneaux(Matiere matiere) {
+    setState(() {
+      currentColloscope.emptyCreneaux(matiere);
+    });
+  }
+
   void addGroupe() {
     setState(() {
       currentColloscope.addGroupe();
@@ -302,6 +308,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onCreateMatiere: createMatiere,
           onUpdateMatiere: updateMatiere,
           onDeleteMatiere: deleteMatiere,
+          onEmptyCreneaux: emptyCreneaux,
           onAdd: addCreneaux,
           onDeleteCreneau: deleteCreneau,
           onDeleteSemaine: deleteSemaine,

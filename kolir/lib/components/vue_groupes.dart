@@ -846,10 +846,11 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
+        Flexible(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -860,7 +861,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                     style: TextStyle(fontSize: 18),
                   ),
                   const SizedBox(height: 10),
-                  Expanded(
+                  Flexible(
                     child: ListView(
                         shrinkWrap: true,
                         children: widget.groupes

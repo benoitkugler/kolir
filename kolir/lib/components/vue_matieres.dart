@@ -19,6 +19,7 @@ class VueMatiereW extends StatelessWidget {
   final void Function() onCreateMatiere;
   final void Function(Matiere matiere) onUpdateMatiere;
   final void Function(Matiere matiere) onDeleteMatiere;
+  final void Function(Matiere matiere) onEmptyCreneaux;
 
   final void Function(MatiereID mat, List<DateHeure> hours, List<int> semaines,
       String colleur) onAdd;
@@ -37,6 +38,7 @@ class VueMatiereW extends StatelessWidget {
       required this.onCreateMatiere,
       required this.onUpdateMatiere,
       required this.onDeleteMatiere,
+      required this.onEmptyCreneaux,
       required this.onAdd,
       required this.onDeleteCreneau,
       required this.onDeleteSemaine,
@@ -89,6 +91,7 @@ class VueMatiereW extends StatelessWidget {
                   byMatieres[mat.id] ?? [],
                   () => onDeleteMatiere(mat),
                   onUpdateMatiere,
+                  () => onEmptyCreneaux(mat),
                   (h, s, c) => onAdd(mat.id, h, s, c),
                   (index) => onDeleteCreneau(mat.id, index),
                   (index) => onDeleteSemaine(mat.id, index),
@@ -230,6 +233,8 @@ class _MatiereW extends StatelessWidget {
 
   final void Function() onDelete;
   final void Function(Matiere) onUpdate;
+  final void Function() onEmptyCreneaux;
+
   final void Function(List<DateHeure> hours, List<int> semaines, String colleur)
       onAdd;
   final void Function(int creneauIndex) onDeleteCreneau;
@@ -245,6 +250,7 @@ class _MatiereW extends StatelessWidget {
       this.semaines,
       this.onDelete,
       this.onUpdate,
+      this.onEmptyCreneaux,
       this.onAdd,
       this.onDeleteCreneau,
       this.onDeleteSemaine,
@@ -327,6 +333,13 @@ class _MatiereW extends StatelessWidget {
                           icon: const Icon(Icons.delete),
                           onPressed: onDelete,
                         ),
+                        IconButton(
+                          splashRadius: 18,
+                          color: Colors.orange,
+                          tooltip: "Vider les créneaux",
+                          icon: const Icon(Icons.restart_alt),
+                          onPressed: onEmptyCreneaux,
+                        ),
                       ],
                     ),
                   ],
@@ -345,6 +358,9 @@ class _MatiereW extends StatelessWidget {
                                     runSpacing: 2,
                                     children: semaine.item
                                         .map((e) => ColleW(e.toColle(matiere),
+                                            state: e.groupe == null
+                                                ? ChipState.regular
+                                                : ChipState.highlighted,
                                             showMatiere: false,
                                             onDelete: (_) =>
                                                 onDeleteCreneau(e.index),

@@ -174,7 +174,8 @@ class MatiereProvider {
   final List<Matiere> _values;
   const MatiereProvider(List<Matiere> values) : _values = values;
 
-  Matiere get(MatiereID m) => _values.firstWhere((element) => element.id == m);
+  Matiere get(MatiereID id) =>
+      _values.firstWhere((element) => element.id == id);
   List<Matiere> get list => _values;
 
   List<dynamic> toJson() {

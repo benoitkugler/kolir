@@ -210,9 +210,10 @@ class Colloscope {
     return semaines;
   }
 
-  Map<GroupeID, List<DateHeure>> _parGroupes() {
-    final out = <GroupeID, List<DateHeure>>{};
+  Map<GroupeID, List<DateHeureDuree>> _parGroupes() {
+    final out = <GroupeID, List<DateHeureDuree>>{};
     for (var element in _matieres.entries) {
+      final matiere = matieresList.get(element.key);
       for (var creneauIndex = 0;
           creneauIndex < element.value.length;
           creneauIndex++) {
@@ -221,7 +222,7 @@ class Colloscope {
           continue;
         }
         final l = out.putIfAbsent(creneau.groupeID!, () => []);
-        l.add(creneau.date);
+        l.add(DateHeureDuree(creneau.date, matiere.colleDuree));
       }
     }
     return out;
@@ -419,6 +420,15 @@ class Colloscope {
     matieresList.list.removeWhere((element) => element.id == matiere.id);
   }
 
+  /// [emptyCreneaux] supprimes les affections de tous les groupes
+  /// pour la matière donnée.
+  void emptyCreneaux(Matiere matiere) {
+    final creneaux = _matieres[matiere.id] ?? [];
+    for (var creneau in creneaux) {
+      creneau.groupeID = null;
+    }
+  }
+
   void addGroupe() {
     int serial = groupes.length + 1;
     while (groupes.indexWhere((g) => g.id == serial) != -1) {
@@ -527,7 +537,8 @@ class Colloscope {
         .toList();
     final groupes = selectedGroupes.map((e) => _groupeMap[e]!).toList();
 
-    return setupRotations(matiere, parSemaine, groupes, _parGroupes(), periode);
+    return setupRotations(
+        matieresList.get(matiere), parSemaine, groupes, _parGroupes(), periode);
   }
 
   /// [attribueAuto] effectue la sélection de la meilleur répartition
