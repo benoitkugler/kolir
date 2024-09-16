@@ -187,6 +187,12 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
     });
   }
 
+  void editCreneauxHoraire(MatiereID mat, int creneauIndex, Horaire horaire) {
+    setState(() {
+      currentColloscope.editCreneauxHoraire(mat, creneauIndex, horaire);
+    });
+  }
+
   void toogleCreneau(GroupeID groupe, MatiereID mat, int creneauIndex) {
     setState(() {
       currentColloscope.toogleCreneau(groupe, mat, creneauIndex);
@@ -314,6 +320,7 @@ class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
           onDeleteSemaine: deleteSemaine,
           onEditColleur: editCreneauColleur,
           onEditSalle: editCreneauxSalle,
+          onEditHoraire: editCreneauxHoraire,
           onRepeteMotifCourant: repeteMotifCourant,
           onShiftSemaines: shiftSemaines,
         );

@@ -29,6 +29,7 @@ class VueMatiereW extends StatelessWidget {
       onEditColleur;
   final void Function(MatiereID mat, int creneauIndex, String salle)
       onEditSalle;
+  final void Function(MatiereID mat, int creneauIndex, Horaire _) onEditHoraire;
   final void Function(MatiereID mat, int nombre, int? periode)
       onRepeteMotifCourant;
   final void Function(int shift) onShiftSemaines;
@@ -44,6 +45,7 @@ class VueMatiereW extends StatelessWidget {
       required this.onDeleteSemaine,
       required this.onEditColleur,
       required this.onEditSalle,
+      required this.onEditHoraire,
       required this.onRepeteMotifCourant,
       required this.onShiftSemaines,
       super.key});
@@ -97,6 +99,7 @@ class VueMatiereW extends StatelessWidget {
                   (index) => onDeleteSemaine(mat.id, index),
                   (index, colleur) => onEditColleur(mat.id, index, colleur),
                   (index, salle) => onEditSalle(mat.id, index, salle),
+                  (index, horaire) => onEditHoraire(mat.id, index, horaire),
                   (nombre, periode) =>
                       onRepeteMotifCourant(mat.id, nombre, periode),
                 ))
@@ -241,6 +244,7 @@ class _MatiereW extends StatelessWidget {
   final void Function(int semaine) onDeleteSemaine;
   final void Function(int creneauIndex, String colleur) onEditColleur;
   final void Function(int creneauIndex, String salle) onEditSalle;
+  final void Function(int creneauIndex, Horaire _) onEditHoraire;
 
   final void Function(int nombre, int? periode) onRepeteMotifCourant;
 
@@ -256,6 +260,7 @@ class _MatiereW extends StatelessWidget {
       this.onDeleteSemaine,
       this.onEditColleur,
       this.onEditSalle,
+      this.onEditHoraire,
       this.onRepeteMotifCourant,
       {super.key});
 
@@ -357,17 +362,23 @@ class _MatiereW extends StatelessWidget {
                                   child: Wrap(
                                     runSpacing: 2,
                                     children: semaine.item
-                                        .map((e) => ColleW(e.toColle(matiere),
-                                            state: e.groupe == null
-                                                ? ChipState.regular
-                                                : ChipState.highlighted,
-                                            showMatiere: false,
-                                            onDelete: (_) =>
-                                                onDeleteCreneau(e.index),
-                                            onEditColleur: (colleur) =>
-                                                onEditColleur(e.index, colleur),
-                                            onEditSalle: (salle) =>
-                                                onEditSalle(e.index, salle)))
+                                        .map((e) => ColleW(
+                                              e.toColle(matiere),
+                                              state: e.groupe == null
+                                                  ? ChipState.regular
+                                                  : ChipState.highlighted,
+                                              showMatiere: false,
+                                              onDelete: (_) =>
+                                                  onDeleteCreneau(e.index),
+                                              onEditColleur: (colleur) =>
+                                                  onEditColleur(
+                                                      e.index, colleur),
+                                              onEditSalle: (salle) =>
+                                                  onEditSalle(e.index, salle),
+                                              onEditHoraire: (h) =>
+                                                  onEditHoraire(e.index, h),
+                                              horaires: horaires,
+                                            ))
                                         .toList(),
                                   ),
                                 ),

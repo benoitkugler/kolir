@@ -195,12 +195,17 @@ class ColleW extends StatefulWidget {
   final void Function(String)? onEditColleur;
   final void Function(String)? onEditSalle;
 
+  final void Function(Horaire)? onEditHoraire;
+  final CreneauHoraireProvider? horaires;
+
   const ColleW(this.colle,
       {this.showMatiere = true,
       this.state = ChipState.regular,
       this.onDelete,
       this.onEditColleur,
       this.onEditSalle,
+      this.onEditHoraire,
+      this.horaires,
       super.key});
 
   @override
@@ -210,6 +215,7 @@ class ColleW extends StatefulWidget {
 class _ColleWState extends State<ColleW> {
   var colleurController = TextEditingController();
   var salleController = TextEditingController();
+  Horaire horaire = const Horaire(0, 0);
 
   void showEditColleur() async {
     colleurController.text = widget.colle.colleur;
@@ -263,6 +269,36 @@ class _ColleWState extends State<ColleW> {
     }
   }
 
+  void showEditHoraire() async {
+    horaire = widget.colle.date.horaire;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "Modifier l'horaire",
+        ),
+        actions: [
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Valider"))
+        ],
+        content: DropdownMenu(
+          initialSelection: horaire,
+          width: 200,
+          label: const Text("Horaire"),
+          dropdownMenuEntries: widget.horaires!.values
+              .map((cr) => DropdownMenuEntry(
+                  value: cr.horaire, label: "${cr.hour}:${cr.minute}"))
+              .toList(),
+          onSelected: (key) => setState(() => horaire = key!),
+        ),
+      ),
+    );
+    if (ok != null) {
+      widget.onEditHoraire!(horaire);
+    }
+  }
+
   bool get showMenuDetails =>
       widget.onDelete != null &&
       widget.onEditColleur != null &&
@@ -290,6 +326,14 @@ class _ColleWState extends State<ColleW> {
                 onTap: () => Future.delayed(const Duration(), showEditSalle),
                 child: const ListTile(
                   title: Text("Modifier la salle"),
+                  horizontalTitleGap: 10,
+                  minLeadingWidth: 0,
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () => Future.delayed(const Duration(), showEditHoraire),
+                child: const ListTile(
+                  title: Text("Modifier l'horaire"),
                   horizontalTitleGap: 10,
                   minLeadingWidth: 0,
                 ),

@@ -559,6 +559,20 @@ class Colloscope {
     }
   }
 
+  /// modifie l'horaire de tous les créneaux (de la matière) ayant les mêmes jour, moment et colleur
+  /// que le créneau identifié par [creneauxIndex]
+  void editCreneauxHoraire(MatiereID mat, int creneauxIndex, Horaire horaire) {
+    final l = _matieres[mat] ?? [];
+    final ref = l[creneauxIndex];
+    final refDate = ref.date.copyWithWeek(1);
+    for (var cr in l) {
+      if (cr.colleur == ref.colleur && cr.date.copyWithWeek(1) == refDate) {
+        cr.date = DateHeure(
+            cr.date.semaine, cr.date.weekday, horaire.hour, horaire.minute);
+      }
+    }
+  }
+
   /// [setupAttribueAuto] prépare l'attribution des créneaux donnés,
   /// ou renvoit une erreur si les créneaux sont incompatibles avec l'occupation courante.
   Maybe<RotationSelector> setupAttribueAuto(
@@ -890,7 +904,7 @@ typedef Creneaux = List<SemaineTo<List<PopulatedCreneau>>>;
 typedef VueMatiere = Creneaux;
 
 class _PopulatedCreneau {
-  final DateHeure date;
+  DateHeure date;
   GroupeID? groupeID;
   String colleur;
   String salle;

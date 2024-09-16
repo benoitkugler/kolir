@@ -51,6 +51,22 @@ bool isEmptyDate(DateHeure dt) {
   return dt == const DateHeure(-1, 0, 0, 0);
 }
 
+class Horaire {
+  final int hour;
+  final int minute;
+  const Horaire(this.hour, this.minute);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Horaire &&
+      other.runtimeType == runtimeType &&
+      other.hour == hour &&
+      other.minute == minute;
+
+  @override
+  int get hashCode => hour.hashCode + minute.hashCode;
+}
+
 /// DateHeure est une version simplifiée de DateTime,
 /// qui se réfère aux semaines du colloscope.
 /// La correspondance avec les jours du calendrier réel
@@ -75,6 +91,8 @@ class DateHeure implements Comparable<DateHeure> {
   @override
   int get hashCode =>
       semaine.hashCode + weekday.hashCode + hour.hashCode + minute.hashCode;
+
+  Horaire get horaire => Horaire(hour, minute);
 
   @override
   int compareTo(DateHeure other) {

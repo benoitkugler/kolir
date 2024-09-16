@@ -28,6 +28,8 @@ class CreneauHoraireData {
         lengthInMinutes: json["lengthInMinutes"] ?? 60);
   }
 
+  Horaire get horaire => Horaire(hour, minute);
+
   int get _duration => hour * 60 + minute;
 
   bool operator >(Object other) =>
