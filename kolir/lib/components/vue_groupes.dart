@@ -33,8 +33,9 @@ class VueGroupeW extends StatefulWidget {
   final void Function(GroupeID groupe, MatiereID mat, int creneauIndex)
       onToogleCreneau;
   final void Function(MatiereID mat) onClearMatiere;
-  final Maybe<RotationSelector> Function(MatiereID mat, List<GroupeID> groupes,
-      List<int> semaines, int periode) onSetupAttribueAuto;
+  final Maybe<RotationSelector> Function(
+          MatiereID mat, List<GroupeID> groupes, List<int> semaines)
+      onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
   // special variants for informatique
@@ -672,8 +673,9 @@ class _Assistant extends StatelessWidget {
   final List<Groupe> groupes;
   final Map<MatiereID, VueMatiere> creneaux;
 
-  final Maybe<RotationSelector> Function(MatiereID mat, List<GroupeID> groupes,
-      List<int> semaines, int periode) onSetupAttribueAuto;
+  final Maybe<RotationSelector> Function(
+          MatiereID mat, List<GroupeID> groupes, List<int> semaines)
+      onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
   // special variants for variable creneaux like informatique
@@ -704,8 +706,8 @@ class _Assistant extends StatelessWidget {
               matiere,
               groupes,
               creneaux[matiere.id] ?? [],
-              (groupes, semaines, periode) =>
-                  onSetupAttribueAuto(matiere.id, groupes, semaines, periode),
+              (groupes, semaines) =>
+                  onSetupAttribueAuto(matiere.id, groupes, semaines),
               onAttributeAuto,
             )
           : AttribueVariableCreneaux(matiere, creneauxList,
@@ -720,8 +722,7 @@ class _AssistantMatiere extends StatefulWidget {
   final VueMatiere creneaux;
 
   final Maybe<RotationSelector> Function(
-          List<GroupeID> groupes, List<int> semaines, int periode)
-      onSetupAttribueAuto;
+      List<GroupeID> groupes, List<int> semaines) onSetupAttribueAuto;
   final void Function(SelectedRotation) onAttributeAuto;
 
   const _AssistantMatiere(this.matiere, this.groupes, this.creneaux,
@@ -736,8 +737,6 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
   Set<GroupeID> selectedGroupes = {};
   Set<int> selectedSemaines = {};
 
-  var periodeCt = TextEditingController();
-
   int? computationNumber; // null means not in computation
   CancelableOperation? selectionOperation;
 
@@ -747,26 +746,15 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     super.didUpdateWidget(oldWidget);
   }
 
-  void _inferPeriodeHint() {
-    if (selectedCreneaux.isEmpty) {
-      periodeCt.text = "";
-    } else {
-      final periode = hintPeriode(selectedCreneaux, selectedGroupes.length);
-      periodeCt.text = periode.toString();
-    }
-  }
-
   void onSelectGroupe(GroupeID groupe, bool checked) {
     setState(() {
       checked ? selectedGroupes.add(groupe) : selectedGroupes.remove(groupe);
-      _inferPeriodeHint();
     });
   }
 
   void onSelectSemaines(Set<int> selected) {
     setState(() {
       selectedSemaines = selected;
-      _inferPeriodeHint();
     });
   }
 
@@ -774,8 +762,7 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     final groupes = selectedGroupes.toList();
     groupes.sort();
 
-    final res = widget.onSetupAttribueAuto(
-        groupes, selectedSemaines.toList(), periode!);
+    final res = widget.onSetupAttribueAuto(groupes, selectedSemaines.toList());
     if (res.error.isNotEmpty) {
       showDialog(
         context: context,
@@ -816,8 +803,6 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     });
   }
 
-  int? get periode => int.tryParse(periodeCt.text);
-
   Creneaux get selectedCreneaux => selectedSemaines
       .map((semaineIndex) => SemaineTo(
           semaineIndex,
@@ -830,10 +815,6 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
     if (selectedGroupes.isEmpty || selectedSemaines.isEmpty) {
       return false;
     }
-    if (periode == null) {
-      return false;
-    }
-
     // pour simplifier on impose l'égalite entre le nombre de
     // créneaux de chaque semaine
     final nbFirstWeek = selectedCreneaux.first.item.length;
@@ -845,40 +826,41 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Flexible(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        Expanded(
+          flex: 1,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text(
+              "Choix des groupes",
+              style: TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 10),
+            Flexible(
+              child: ListView(
+                  shrinkWrap: true,
+                  children: widget.groupes
+                      .map((e) => CheckboxListTile(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6)),
+                          dense: true,
+                          title: Text(e.name),
+                          selected: selectedGroupes.contains(e.id),
+                          value: selectedGroupes.contains(e.id),
+                          onChanged: (checked) =>
+                              onSelectGroupe(e.id, checked!)))
+                      .toList()),
+            ),
+          ]),
+        ),
+        Expanded(
+          flex: 6,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text(
-                    "Choix des groupes",
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  const SizedBox(height: 10),
-                  Flexible(
-                    child: ListView(
-                        shrinkWrap: true,
-                        children: widget.groupes
-                            .map((e) => CheckboxListTile(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6)),
-                                dense: true,
-                                title: Text(e.name),
-                                selected: selectedGroupes.contains(e.id),
-                                value: selectedGroupes.contains(e.id),
-                                onChanged: (checked) =>
-                                    onSelectGroupe(e.id, checked!)))
-                            .toList()),
-                  ),
-                ]),
-              ),
-              Expanded(
+              Flexible(
                 flex: 6,
                 child: _AssistantMatiereCreneaux(
                   selectedSemaines,
@@ -887,55 +869,42 @@ class _AssistantMatiereState extends State<_AssistantMatiere> {
                   onSelectSemaines,
                 ),
               ),
+              const SizedBox(height: 10),
+              Row(children: [
+                const Spacer(),
+                Tooltip(
+                  message: computationNumber != null
+                      ? "En train de choisir la meilleure répartition parmi $computationNumber..."
+                      : "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
+                  child: computationNumber != null
+                      ? ElevatedButton.icon(
+                          onPressed: cancelSelection,
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.yellow.shade600),
+                          icon: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator()),
+                          ),
+                          label: const Text("Annuler l'opération..."))
+                      : ElevatedButton(
+                          onPressed: isSelectionValide() ? _onAttribue : null,
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.lightGreen.shade400),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "Atttribuer les créneaux",
+                              textAlign: TextAlign.center,
+                            ),
+                          )),
+                ),
+              ])
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        Row(children: [
-          Flexible(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: TextFormField(
-                controller: periodeCt,
-                decoration: const InputDecoration(
-                    labelText: "Ajuster la période",
-                    isDense: true,
-                    helperText:
-                        "Nombre de semaines entre deux colles, à ajuster quand la valeur déduite de la sélection est incorrecte."),
-              ),
-            ),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: computationNumber != null
-                ? "En train de choisir la meilleure répartition parmi $computationNumber..."
-                : "Répartir automatiquement les groupes sélectionnés sur les semaines sélectionnées.",
-            child: computationNumber != null
-                ? ElevatedButton.icon(
-                    onPressed: cancelSelection,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.yellow.shade600),
-                    icon: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator()),
-                    ),
-                    label: const Text("Annuler l'opération..."))
-                : ElevatedButton(
-                    onPressed: isSelectionValide() ? _onAttribue : null,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightGreen.shade400),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text(
-                        "Atttribuer les créneaux",
-                        textAlign: TextAlign.center,
-                      ),
-                    )),
-          ),
-        ])
       ],
     );
   }

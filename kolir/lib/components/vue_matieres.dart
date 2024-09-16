@@ -426,6 +426,7 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
   final nameCt = TextEditingController();
   final shortNameCt = TextEditingController();
   final dureeCt = TextEditingController();
+  final periodeCt = TextEditingController();
   Color color = Colors.blue;
   final colorCt = TextEditingController();
   bool hasInitialCreneaux = true;
@@ -435,6 +436,7 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
     nameCt.text = widget.matiere.name;
     shortNameCt.text = widget.matiere.shortName;
     dureeCt.text = widget.matiere.colleDuree.toString();
+    periodeCt.text = widget.matiere.periode.toString();
     color = widget.matiere.color;
     colorCt.text = color.toHexString(includeHashSign: true);
     hasInitialCreneaux = widget.matiere.hasInitialCreneaux;
@@ -459,8 +461,12 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
     if (nameCt.text.isEmpty || shortNameCt.text.isEmpty) return null;
     final duree = int.tryParse(dureeCt.text);
     if (duree == null) return null;
+    final periode = int.tryParse(periodeCt.text);
+    if (periode == null || periode < 1) return null;
     return Matiere(widget.matiere.id, nameCt.text, shortNameCt.text, color,
-        colleDuree: duree, hasInitialCreneaux: hasInitialCreneaux);
+        colleDuree: duree,
+        periode: periode,
+        hasInitialCreneaux: hasInitialCreneaux);
   }
 
   @override
@@ -484,6 +490,17 @@ class _MatiereDetailsDialogState extends State<_MatiereDetailsDialog> {
               suffixText: "minutes",
               helperText: "Utilisé pour calculer les chevauchements"),
           controller: dureeCt,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        TextFormField(
+          decoration: const InputDecoration(
+              labelText: "Période",
+              suffixText: "semaines",
+              helperText:
+                  "Période de rotation pour chaque groupe (une colle toutes les ... semaines)",
+              helperMaxLines: 2),
+          controller: periodeCt,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         ),

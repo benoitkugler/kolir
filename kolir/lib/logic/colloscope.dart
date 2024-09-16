@@ -84,7 +84,6 @@ class Colloscope {
     this.matieresList = const MatiereProvider([]),
     this.semaines = const SemaineProvider({}),
   }) {
-    matieresList = defautMatieres.copy();
     assert(_matieres.values.every(
         (element) => element.isSorted((a, b) => a.date.compareTo(b.date))));
 
@@ -522,8 +521,8 @@ class Colloscope {
 
   /// [setupAttribueAuto] prépare l'attribution des créneaux donnés,
   /// ou renvoit une erreur si les créneaux sont incompatibles avec l'occupation courante.
-  Maybe<RotationSelector> setupAttribueAuto(MatiereID matiere,
-      List<GroupeID> selectedGroupes, List<int> semaines, int periode) {
+  Maybe<RotationSelector> setupAttribueAuto(
+      MatiereID matiere, List<GroupeID> selectedGroupes, List<int> semaines) {
     final backupArray = (_matieres[matiere] ?? []);
     final creneaux = List<PopulatedCreneau>.generate(
         backupArray.length,
@@ -538,7 +537,7 @@ class Colloscope {
     final groupes = selectedGroupes.map((e) => _groupeMap[e]!).toList();
 
     return setupRotations(
-        matieresList.get(matiere), parSemaine, groupes, _parGroupes(), periode);
+        matieresList.get(matiere), parSemaine, groupes, _parGroupes());
   }
 
   /// [attribueAuto] effectue la sélection de la meilleur répartition

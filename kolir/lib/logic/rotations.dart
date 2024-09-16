@@ -15,19 +15,19 @@ Maybe<RotationSelector> setupRotations(
     Matiere matiere,
     List<SemaineTo<List<PopulatedCreneau>>> creneauxParSemaine,
     List<Groupe> groupes,
-    Map<GroupeID, List<DateHeureDuree>> alreadyAttributed,
-    int periode) {
+    Map<GroupeID, List<DateHeureDuree>> alreadyAttributed) {
   final builder = _RotationBuilder(
       creneauxParSemaine, groupes, matiere.colleDuree, alreadyAttributed);
-  final res = builder._build(periode);
+  final res = builder._build(matiere.periode);
   if (res.error.isNotEmpty) {
-    return Maybe(RotationSelector(0, [], [], [], 0), res.error);
+    return Maybe(
+        RotationSelector(
+            const Matiere(0, "", "", Colors.black, periode: 0), [], [], []),
+        res.error);
   }
 
   return Maybe(
-      RotationSelector(
-          matiere.id, creneauxParSemaine, res.value, groupes, periode),
-      "");
+      RotationSelector(matiere, creneauxParSemaine, res.value, groupes), "");
 }
 
 class DateHeureDuree {
@@ -225,18 +225,6 @@ Iterable<List<T>> generateCombinaisons<T>(List<List<T>> sources) sync* {
   }
 }
 
-/// [hintPeriode] renvoie la période déduite des créneaux et groupes
-/// choisis.
-/// Cette estimation dois parfois être corrigée manuellement.
-int hintPeriode(
-    List<SemaineTo<List<PopulatedCreneau>>> creneaux, int nbGroupes) {
-  creneaux.sortBy<num>((s) => s.semaine);
-  final nbWeek = creneaux.last.semaine - creneaux.first.semaine + 1;
-  final nbCreneaux = creneaux.map((s) => s.item.length).reduce((a, b) => a + b);
-  final periode = nbWeek / (nbCreneaux / nbGroupes);
-  return periode.ceil();
-}
-
 class _ColleurGroupe {
   final String colleur;
   final GroupeID groupe;
@@ -267,17 +255,16 @@ double _repartitionDistance(_RepartitionColleurs v1, _RepartitionColleurs v2) {
 }
 
 class RotationSelector {
-  final MatiereID _matiere;
+  final Matiere _matiere;
   final List<SemaineTo<List<PopulatedCreneau>>> _creneauxParSemaine;
   final _CandidatesPerWeek _candidates;
-  final int _periode;
 
   final Map<GroupeID, int> bufferEquilibrium;
   final Map<GroupeID, List<int>> bufferPeriodeByGroupe = {};
   final _RepartitionColleurs bufferRepartitionColleur = {};
 
   RotationSelector(this._matiere, this._creneauxParSemaine, this._candidates,
-      List<Groupe> groupes, this._periode)
+      List<Groupe> groupes)
       : bufferEquilibrium =
             Map.fromEntries(groupes.map((e) => MapEntry(e.id, 0)));
 
@@ -370,7 +357,7 @@ class RotationSelector {
             distance < closestDistance) {
           closestDistance = distance;
         }
-        if (distance > _periode) {
+        if (distance > _matiere.periode) {
           respectPeriode = false;
         }
       }
@@ -400,7 +387,7 @@ class RotationSelector {
         if (periodeScore == null) {
           if (colleurScore == 0) {
             // great !
-            return SelectedRotation(_matiere, _creneauxParSemaine, res);
+            return SelectedRotation(_matiere.id, _creneauxParSemaine, res);
           }
           // store and choose the best repartition later
           withRespectPeriode.add(MapEntry(res, colleurScore));
@@ -421,15 +408,15 @@ class RotationSelector {
           best = item;
         }
       }
-      return SelectedRotation(_matiere, _creneauxParSemaine, best.key);
+      return SelectedRotation(_matiere.id, _creneauxParSemaine, best.key);
     }
 
     // hope for equilbirum
     if (best != null) {
-      return SelectedRotation(_matiere, _creneauxParSemaine, best);
+      return SelectedRotation(_matiere.id, _creneauxParSemaine, best);
     }
     // arg, select the first one
-    return SelectedRotation(_matiere, _creneauxParSemaine,
+    return SelectedRotation(_matiere.id, _creneauxParSemaine,
         iter.first); // note that generateCombinaisons is lazy
   }
 }

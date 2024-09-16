@@ -118,10 +118,15 @@ class Matiere {
   /// [colleDuree] est la durée d'une colle, en minute
   final int colleDuree;
 
+  /// [periode] de la matière, en semaines
+  final int periode;
+
   /// is false, the creneaux are defined when attributing groups
   final bool hasInitialCreneaux;
   const Matiere(this.id, this.name, this.shortName, this.color,
-      {this.colleDuree = 55, this.hasInitialCreneaux = true});
+      {this.colleDuree = 55,
+      this.hasInitialCreneaux = true,
+      required this.periode});
 
   String format({bool dense = false}) {
     return dense ? shortName : name;
@@ -134,6 +139,7 @@ class Matiere {
       "shortName": shortName,
       "color": color.value,
       "colleDuree": colleDuree,
+      "periode": periode,
       "hasInitialCreneaux": hasInitialCreneaux,
     };
   }
@@ -145,6 +151,7 @@ class Matiere {
       json["shortName"],
       Color(json["color"] as int),
       colleDuree: json["colleDuree"] ?? 55,
+      periode: json["periode"] ?? 2,
       hasInitialCreneaux: json["hasInitialCreneaux"] ?? true,
     );
   }
@@ -158,6 +165,7 @@ class Matiere {
       other.shortName == shortName &&
       other.color.value == color.value &&
       other.colleDuree == colleDuree &&
+      other.periode == periode &&
       other.hasInitialCreneaux == hasInitialCreneaux;
 
   @override
@@ -167,6 +175,7 @@ class Matiere {
       shortName.hashCode +
       color.hashCode +
       colleDuree.hashCode +
+      periode.hashCode +
       hasInitialCreneaux.hashCode;
 }
 
@@ -198,7 +207,8 @@ class MatiereProvider {
   Matiere create() {
     final newID = (_values.map((e) => e.id).maxOrNull ?? 0) + 1;
     final out = Matiere(
-        newID, "Nouvelle matière", "", Color(Random().nextInt(1 << 32)));
+        newID, "Nouvelle matière", "", Color(Random().nextInt(1 << 32)),
+        periode: 2);
     _values.add(out);
     return out;
   }
@@ -210,17 +220,21 @@ class MatiereProvider {
 }
 
 const defautMatieres = MatiereProvider([
-  Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1)),
+  Matiere(0, "Mathématiques", "Maths.", Color.fromRGBO(59, 76, 230, 1),
+      periode: 2),
   Matiere(1, "Economie, Sociologie, Histoire", "ESH",
       Color.fromARGB(255, 199, 25, 184),
-      colleDuree: 80),
-  Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D)),
-  Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176)),
-  Matiere(4, "Espagnol", "Espa.", Color.fromARGB(255, 235, 107, 107)),
-  Matiere(5, "Francais", "Fran.", Color.fromARGB(255, 90, 185, 103)),
-  Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58)),
+      periode: 2, colleDuree: 75),
+  Matiere(2, "Anglais", "Anglais", Color(0xFFFFB74D), periode: 3),
+  Matiere(3, "Allemand", "Allem.", Color(0xFFFFF176), periode: 3),
+  Matiere(4, "Espagnol", "Espa.", Color.fromARGB(255, 235, 107, 107),
+      periode: 3),
+  Matiere(5, "Francais", "Fran.", Color.fromARGB(255, 90, 185, 103),
+      periode: 3),
+  Matiere(6, "Philosophie", "Philo.", Color.fromARGB(255, 10, 235, 58),
+      periode: 3),
   Matiere(7, "Informatique (TP)", "Info.", Color.fromRGBO(18, 203, 228, 1),
-      hasInitialCreneaux: false)
+      periode: 1, hasInitialCreneaux: false)
 ]);
 
 final _defautFirstMonday = DateTime(2024, DateTime.september, 2);
