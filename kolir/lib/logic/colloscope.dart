@@ -36,12 +36,16 @@ class Diagnostic {
   /// n'est pas constant (ou nul)
   final List<Matiere> matiereNonEquilibrees;
 
+  /// les matières pour lesquelles la période n'est pas respectée
+  final List<Matiere> matiereMauvaisePeriodes;
+
   const Diagnostic(
     this.collisions,
     this.chevauchements,
     this.contraintes,
     this.semainesChargees,
     this.matiereNonEquilibrees,
+    this.matiereMauvaisePeriodes,
   );
 }
 
@@ -305,7 +309,7 @@ class Colloscope {
     // contrainte d'équilibre
     final equilibriumFailed = <GroupeID, List<Matiere>>{};
     for (var item in _matieres.entries) {
-      final matiere = item.key;
+      final matiereID = item.key;
       // calcule le nombre de colle par groupe
       final parGroupe = <GroupeID, int>{};
       for (var cr in item.value) {
@@ -316,10 +320,13 @@ class Colloscope {
       if (parGroupe.values.toSet().length != 1) {
         for (var groupe in parGroupe.keys) {
           final l = equilibriumFailed.putIfAbsent(groupe, () => []);
-          l.add(mm[matiere]!);
+          l.add(mm[matiereID]!);
         }
       }
     }
+
+    final firstSemaine = parSemaine().first.semaine;
+    final lastSemaine = parSemaine().last.semaine;
 
     for (var item in parGroupe().entries) {
       final group = item.key;
@@ -379,14 +386,47 @@ class Colloscope {
           .map((s) => s.semaine)
           .toList();
 
+      // vérification de la période pour chaque matière
+      final wrongPeriodes = <Matiere>[];
+      for (var matiere in matieresList.list) {
+        final withMatiere = parSemaine
+            .where(
+                (sc) => sc.item.any((colle) => colle.matiere.id == matiere.id))
+            .map((sc) => sc.semaine)
+            .toList();
+        // ignore matiere with no colle at all
+        if (withMatiere.isEmpty) continue;
+        withMatiere.add(lastSemaine + 1);
+
+        int maxEcart = 0;
+        int previousSemaine = firstSemaine - 1;
+        for (var semaine in withMatiere) {
+          if (semaine == previousSemaine) continue;
+          final ecart = semaine - previousSemaine;
+          if (ecart > maxEcart) maxEcart = ecart;
+          previousSemaine = semaine;
+        }
+        final threshold = (matiere.periode * 1.5).floor(); // 3 => 4 ; 4 => 6
+        if (maxEcart > threshold) {
+          // beaucoup d'écart
+          wrongPeriodes.add(matiere);
+        }
+      }
+
       final equilibrium = equilibriumFailed[group] ?? [];
       if (collisions.isNotEmpty ||
           semainesChargees.isNotEmpty ||
           chevauchements.isNotEmpty ||
           contraintes.isNotEmpty ||
-          equilibrium.isNotEmpty) {
-        out[group] = Diagnostic(Collisions.fromEntries(collisions),
-            chevauchements, contraintes, semainesChargees, equilibrium);
+          equilibrium.isNotEmpty ||
+          wrongPeriodes.isNotEmpty) {
+        out[group] = Diagnostic(
+            Collisions.fromEntries(collisions),
+            chevauchements,
+            contraintes,
+            semainesChargees,
+            equilibrium,
+            wrongPeriodes);
       }
     }
     return out;

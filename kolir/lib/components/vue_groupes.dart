@@ -123,7 +123,7 @@ class _VueGroupeWState extends State<VueGroupeW> {
                   widget.colles[gr.id] ?? [],
                   widget.creneaux,
                   widget.diagnostics[gr.id] ??
-                      const Diagnostic({}, [], [], [], []),
+                      const Diagnostic({}, [], [], [], [], []),
                   () => widget.onRemoveGroupe(gr.id),
                   () => widget.onClearGroupeCreneaux(gr.id),
                   (mat, creneauIndex) =>
@@ -657,9 +657,19 @@ class _DiagnosticW extends StatelessWidget {
         _DiagnosticCard(
             "Matières non équilibrées :",
             diagnostic.matiereNonEquilibrees
-                .map((item) => Padding(
+                .map((mat) => Padding(
                       padding: itemPadding,
-                      child: Text(item.format()),
+                      child: Text(mat.format()),
+                    ))
+                .toList()),
+      // période invalides
+      if (diagnostic.matiereMauvaisePeriodes.isNotEmpty)
+        _DiagnosticCard(
+            "Matières avec beaucoup d'écart :",
+            diagnostic.matiereMauvaisePeriodes
+                .map((mat) => Padding(
+                      padding: itemPadding,
+                      child: Text(mat.format()),
                     ))
                 .toList()),
     ]);
