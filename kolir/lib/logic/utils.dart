@@ -29,8 +29,11 @@ String formatWeekday(int weekday, {dense = true}) {
   return _daysLong[weekday];
 }
 
-String formatDate(DateTime date, {dense = false}) {
-  return "${formatWeekday(date.weekday, dense: dense)} ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
+String formatDate(DateTime date, {dense = false, withYear = false}) {
+  final s =
+      "${formatWeekday(date.weekday, dense: dense)} ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
+  if (withYear) return "$s/${date.year}";
+  return s;
 }
 
 String formatDateTime(DateTime date, DateHeure time) {

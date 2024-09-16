@@ -291,15 +291,17 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
     });
   }
 
-  onEditMonday(int index, String newDate) {
-    final chunks = newDate.split("/");
-    if (chunks.length != 3) return;
-    final day = int.tryParse(chunks[0]);
-    final month = int.tryParse(chunks[1]);
-    final year = int.tryParse(chunks[2]);
-    if (day == null || month == null || year == null) return;
+  onEditMonday(int index, DateTime newDate) {
+    // final chunks = newDate.split("/");
+    // if (chunks.length != 3) return;
+    // final day = int.tryParse(chunks[0]);
+    // final month = int.tryParse(chunks[1]);
+    // final year = int.tryParse(chunks[2]);
+    // if (day == null || month == null || year == null) return;
+    // final date = DateTime(year, month, day);
+    // if (date.weekday != 1) return; // make sure it is a monday
     setState(() {
-      edited[index] = MapEntry(edited[index].key, DateTime(year, month, day));
+      edited[index] = MapEntry(edited[index].key, newDate);
     });
   }
 
@@ -309,6 +311,17 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
 
   @override
   Widget build(BuildContext context) {
+    var now = DateTime.now();
+    var findMonday = DateTime(now.year, now.month, now.day, 1);
+    while (findMonday.weekday != 1) {
+      findMonday = findMonday.add(const Duration(days: 1));
+    }
+    final mondays = [];
+    for (var i = 0; i < 20; i++) {
+      mondays.add(DateTime(findMonday.year, findMonday.month, findMonday.day));
+      findMonday = findMonday.add(const Duration(days: 7));
+    }
+
     return AlertDialog(
       title: const Text("Editer le calendrier"),
       content: Column(
@@ -338,13 +351,14 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
                               onChanged: (s) => onEditSemaine(index, s),
                             ),
                           ),
-                          title: TextFormField(
-                            textAlign: TextAlign.center,
-                            decoration:
-                                const InputDecoration(hintText: "JJ/MM/AAAA"),
-                            initialValue:
-                                "${time.day}/${time.month}/${time.year}",
-                            onChanged: (s) => onEditMonday(index, s),
+                          title: DropdownMenu(
+                            initialSelection: time,
+                            onSelected: (v) => onEditMonday(index, v!),
+                            dropdownMenuEntries: mondays
+                                .map((m) => DropdownMenuEntry(
+                                    value: m,
+                                    label: formatDate(m, withYear: true)))
+                                .toList(),
                           ),
                           trailing: IconButton(
                               onPressed: () => deleteEntry(index),
