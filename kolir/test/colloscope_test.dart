@@ -133,4 +133,30 @@ void main() {
         ]),
         true);
   });
+
+  test("Contraintes", () {
+    final colloscope = Colloscope({}, const [
+      Groupe(1, creneauxInterdits: [DateHeure(1, 1, 12, 15)]),
+      Groupe(2, creneauxInterdits: [DateHeure(1, 2, 12, 15)]),
+      Groupe(3)
+    ], matieresList: defautMatieres);
+    const MatiereID mat = 1;
+    const GroupeID g1 = 1;
+    const GroupeID g2 = 2;
+    colloscope.addCreneaux(
+        mat,
+        [const DateHeure(1, 1, 12, 0), const DateHeure(1, 2, 13, 00)],
+        [1],
+        'Kugler');
+    colloscope.toogleCreneau(g1, mat, 0);
+    colloscope.toogleCreneau(g2, mat, 1);
+    expect(colloscope.parGroupe()[g1]![0].item.length, 1);
+    expect(colloscope.parGroupe()[g2]![0].item.length, 1);
+
+    final warnings = colloscope.diagnostics();
+    expect(warnings[g1], isNotNull);
+    expect(warnings[g1]!.contraintes.length, 1);
+    expect(warnings[g2], isNotNull);
+    expect(warnings[g2]!.contraintes.length, 1);
+  });
 }

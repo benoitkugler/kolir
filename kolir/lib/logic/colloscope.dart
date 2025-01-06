@@ -355,10 +355,9 @@ class Colloscope {
           final courant = semaine.item[i];
           final suivant = semaine.item[i + 1];
           final duree = courant.matiere.colleDuree;
-          if (courant.date
-              .toDateTime()
-              .add(Duration(minutes: duree))
-              .isAfter(suivant.date.toDateTime())) {
+          final plage1 = DateHeureDuree(courant.date, duree);
+          final plage2 = DateHeureDuree(suivant.date, duree);
+          if (plage1.intersects(plage2)) {
             chevauchements.add(Chevauchement(courant, suivant));
           }
         }
@@ -367,8 +366,12 @@ class Colloscope {
       // contraintes de créneaux
       final cs = gm[group]!.constraintsSet();
       final contraintes = parSemaine
-          .map((s) =>
-              s.item.where((colle) => cs.contains(colle.date.copyWithWeek(1))))
+          .map((s) => s.item.where((colle) {
+                final plage = DateHeureDuree(
+                    colle.date.copyWithWeek(1), colle.matiere.colleDuree);
+                return cs.any(
+                    (creneau) => DateHeureDuree(creneau, 55).intersects(plage));
+              }))
           .fold(<Colle>[], (pr, el) => [...pr, ...el]);
 
       // surchage : on calcule le nombre moyen de colles par semaine
@@ -738,19 +741,13 @@ class Colloscope {
       final matiere = _matiereMap[item.key]!;
       for (var creneau in item.value) {
         if (creneau.groupe == null) continue; // créneau attribués seulement
-        final start = creneau.date.toDateTime();
-        final end = start.add(Duration(minutes: matiere.colleDuree));
+        final plage = DateHeureDuree(creneau.date, matiere.colleDuree);
         // chevauchement ?
         for (var i = 0; i < params.creneauxCandidats.length; i++) {
           final candidat = params.creneauxCandidats[i];
-          final startInfo = candidat.copyWithWeek(semaine).toDateTime();
-          final endInfo = startInfo.add(Duration(minutes: params.colleDuree));
-
-          final hasChevauchement = (start.isBefore(startInfo) ||
-                      start.isAtSameMomentAs(startInfo)) &&
-                  end.isAfter(startInfo) ||
-              (start.isAfter(startInfo) || start.isAtSameMomentAs(startInfo)) &&
-                  start.isBefore(endInfo);
+          final startInfo = candidat.copyWithWeek(semaine);
+          final plageInfo = DateHeureDuree(startInfo, params.colleDuree);
+          final hasChevauchement = plageInfo.intersects(plage);
           if (hasChevauchement) {
             // le créneau candidat n'est pas dispo
             blocages[i].add(creneau.groupe!.id);

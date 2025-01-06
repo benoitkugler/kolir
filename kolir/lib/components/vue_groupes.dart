@@ -639,7 +639,7 @@ class _DiagnosticW extends StatelessWidget {
                 .map((item) => Padding(
                       padding: itemPadding,
                       child: Text(
-                          "${item.date.formatDateHeure()} (${item.matiere.format(dense: true)})"),
+                          "S ${item.date.semaine} ${item.date.formatDateHeure()} (${item.matiere.format(dense: true)})"),
                     ))
                 .toList()),
       // surcharges
