@@ -317,7 +317,7 @@ class __SemaineProviderEditorState extends State<_SemaineProviderEditor> {
       findMonday = findMonday.add(const Duration(days: 1));
     }
     final mondays = [];
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 30; i++) {
       mondays.add(DateTime(findMonday.year, findMonday.month, findMonday.day));
       findMonday = findMonday.add(const Duration(days: 7));
     }
